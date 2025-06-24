@@ -7,10 +7,8 @@ const app = document.querySelector(".app");
 
 const newRoomInput = document.getElementById("newRoomInput");
 const createRoomBtn = document.getElementById("createRoom");
-const roomList = document.getElementById("roomList");
-const userList = document.getElementById("userList");
+const chatList = document.getElementById("chatList");
 
-const chatTabs = document.getElementById("chatTabs");
 const chatHeader = document.getElementById("chatHeader");
 const messagesDiv = document.getElementById("messages");
 const messageInput = document.getElementById("messageInput");
@@ -21,7 +19,6 @@ let activeTab = null;
 const tabs = {};
 const joinedRooms = new Set();
 
-// Inloggen
 enterChatBtn.addEventListener("click", () => {
   const name = usernameInput.value.trim();
   if (!name) return alert("Typ een naam in.");
@@ -33,17 +30,15 @@ enterChatBtn.addEventListener("click", () => {
   socket.emit("get joined rooms");
 });
 
-// Groep maken of joinen
 createRoomBtn.addEventListener("click", () => {
   const room = newRoomInput.value.trim();
   if (!room) return;
   socket.emit("join room", room);
-  if (!tabs[room]) addChatTab(room);
+  if (!tabs[room]) addChatTab(room, true);
   setActiveTab(room);
   newRoomInput.value = "";
 });
 
-// Bericht verzenden
 sendBtn.addEventListener("click", sendMessage);
 messageInput.addEventListener("keydown", e => {
   if (e.key === "Enter") sendMessage();
@@ -56,27 +51,27 @@ function sendMessage() {
   messageInput.value = "";
 }
 
-// Tabs beheren
-function addChatTab(name) {
+function addChatTab(name, isRoom = false, color = "#ccc") {
   if (tabs[name]) return;
   tabs[name] = [];
-  const tab = document.createElement("div");
-  tab.classList.add("chat-tab");
-  tab.textContent = name;
-  tab.addEventListener("click", () => setActiveTab(name));
-  chatTabs.appendChild(tab);
+  const li = document.createElement("li");
+  li.textContent = name;
+  li.style.backgroundColor = color;
+  li.dataset.name = name;
+  li.classList.add("chat-item");
+  li.addEventListener("click", () => setActiveTab(name));
+  chatList.appendChild(li);
 }
 
 function setActiveTab(name) {
   activeTab = name;
   chatHeader.textContent = name;
-  Array.from(chatTabs.children).forEach(tab => {
-    tab.classList.toggle("active", tab.textContent === name);
+  document.querySelectorAll(".chat-item").forEach(li => {
+    li.classList.toggle("active", li.dataset.name === name);
   });
   renderMessages();
 }
 
-// Berichten tonen
 function renderMessages() {
   messagesDiv.innerHTML = "";
   if (!tabs[activeTab]) return;
@@ -90,44 +85,26 @@ function renderMessages() {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Gebruikerslijst
 socket.on("all users", users => {
-  userList.innerHTML = "";
   users.forEach(u => {
-    const li = document.createElement("li");
-    li.textContent = u.name;
-    li.style.backgroundColor = u.color;
-    li.addEventListener("click", () => {
-      if (u.name === username) return;
-      socket.emit("start private chat", u.name);
-    });
-    userList.appendChild(li);
+    if (u.name === username) return;
+    if (!tabs[u.name]) addChatTab(u.name, false, u.color);
   });
 });
 
-// Groepenlijst
 socket.on("joined rooms", rooms => {
-  roomList.innerHTML = "";
   rooms.forEach(room => {
     joinedRooms.add(room);
-    const li = document.createElement("li");
-    li.textContent = room;
-    li.addEventListener("click", () => {
-      if (!tabs[room]) addChatTab(room);
-      setActiveTab(room);
-    });
-    roomList.appendChild(li);
+    if (!tabs[room]) addChatTab(room, true);
   });
 });
 
-// Bericht ontvangen
 socket.on("chat message", ({ tab, user, text, color }) => {
-  if (!tabs[tab]) addChatTab(tab);
+  if (!tabs[tab]) addChatTab(tab, false, color);
   tabs[tab].push({ user, text, color });
   if (tab === activeTab) renderMessages();
 });
 
-// Privéchat
 socket.on("private chat started", (roomName, otherUser) => {
   if (!tabs[roomName]) addChatTab(roomName);
   setActiveTab(roomName);
