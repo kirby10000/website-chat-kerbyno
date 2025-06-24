@@ -7,7 +7,8 @@ const app = document.querySelector(".app");
 
 const newRoomInput = document.getElementById("newRoomInput");
 const createRoomBtn = document.getElementById("createRoom");
-const allUsersList = document.getElementById("allUsersList");
+const roomList = document.getElementById("roomList");
+const userList = document.getElementById("userList");
 
 const chatTabs = document.getElementById("chatTabs");
 const chatHeader = document.getElementById("chatHeader");
@@ -16,41 +17,33 @@ const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 
 let username = null;
-let activeTab = null; // naam van actieve chat tab
-const tabs = {}; // tabnaam => array met berichten
+let activeTab = null;
+const tabs = {};
+const joinedRooms = new Set();
 
-// Start chat na naam invoer
+// Inloggen
 enterChatBtn.addEventListener("click", () => {
   const name = usernameInput.value.trim();
-  if (!name) {
-    alert("Typ alsjeblieft een naam in.");
-    return;
-  }
+  if (!name) return alert("Typ een naam in.");
   username = name;
   socket.emit("register", username);
-
   loginScreen.classList.add("hidden");
   app.classList.remove("hidden");
-
   socket.emit("get users");
+  socket.emit("get joined rooms");
 });
 
-// Nieuwe groep aanmaken
+// Groep maken of joinen
 createRoomBtn.addEventListener("click", () => {
   const room = newRoomInput.value.trim();
   if (!room) return;
-  if (tabs[room]) {
-    alert("Deze groep bestaat al.");
-    return;
-  }
-  tabs[room] = [];
-  addChatTab(room);
-  setActiveTab(room);
   socket.emit("join room", room);
+  if (!tabs[room]) addChatTab(room);
+  setActiveTab(room);
   newRoomInput.value = "";
 });
 
-// Bericht sturen
+// Bericht verzenden
 sendBtn.addEventListener("click", sendMessage);
 messageInput.addEventListener("keydown", e => {
   if (e.key === "Enter") sendMessage();
@@ -63,9 +56,9 @@ function sendMessage() {
   messageInput.value = "";
 }
 
-// Maak chat tab aan in UI
+// Tabs beheren
 function addChatTab(name) {
-  if (tabs[name]) return; // tab bestaat al
+  if (tabs[name]) return;
   tabs[name] = [];
   const tab = document.createElement("div");
   tab.classList.add("chat-tab");
@@ -74,7 +67,6 @@ function addChatTab(name) {
   chatTabs.appendChild(tab);
 }
 
-// Activeer chat tab
 function setActiveTab(name) {
   activeTab = name;
   chatHeader.textContent = name;
@@ -84,13 +76,10 @@ function setActiveTab(name) {
   renderMessages();
 }
 
-// Toon berichten van actieve tab
+// Berichten tonen
 function renderMessages() {
   messagesDiv.innerHTML = "";
-  if (!activeTab || !tabs[activeTab]) {
-    messagesDiv.textContent = "Geen chat geselecteerd.";
-    return;
-  }
+  if (!tabs[activeTab]) return;
   tabs[activeTab].forEach(msg => {
     const div = document.createElement("div");
     div.classList.add("message");
@@ -101,40 +90,46 @@ function renderMessages() {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Update gebruikerslijst
+// Gebruikerslijst
 socket.on("all users", users => {
-  allUsersList.innerHTML = "";
+  userList.innerHTML = "";
   users.forEach(u => {
     const li = document.createElement("li");
     li.textContent = u.name;
-    li.style.backgroundColor = u.color || "#ccc";
-    li.style.cursor = "pointer";
-    li.title = "Klik om privéchat te starten";
-
-    // Privéchat starten als je op een naam klikt
+    li.style.backgroundColor = u.color;
     li.addEventListener("click", () => {
-      if (u.name === username) return; // Niet met jezelf
+      if (u.name === username) return;
       socket.emit("start private chat", u.name);
     });
-
-    allUsersList.appendChild(li);
+    userList.appendChild(li);
   });
 });
 
-// Nieuwe chat berichten ontvangen
+// Groepenlijst
+socket.on("joined rooms", rooms => {
+  roomList.innerHTML = "";
+  rooms.forEach(room => {
+    joinedRooms.add(room);
+    const li = document.createElement("li");
+    li.textContent = room;
+    li.addEventListener("click", () => {
+      if (!tabs[room]) addChatTab(room);
+      setActiveTab(room);
+    });
+    roomList.appendChild(li);
+  });
+});
+
+// Bericht ontvangen
 socket.on("chat message", ({ tab, user, text, color }) => {
-  if (!tabs[tab]) {
-    addChatTab(tab);
-  }
+  if (!tabs[tab]) addChatTab(tab);
   tabs[tab].push({ user, text, color });
   if (tab === activeTab) renderMessages();
 });
 
-// Privéchat is gestart (ontvangen van server)
-socket.on("private chat started", (roomName, otherUsername) => {
-  if (!tabs[roomName]) {
-    addChatTab(roomName);
-  }
+// Privéchat
+socket.on("private chat started", (roomName, otherUser) => {
+  if (!tabs[roomName]) addChatTab(roomName);
   setActiveTab(roomName);
   socket.emit("join room", roomName);
 });
