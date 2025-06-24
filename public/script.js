@@ -4,6 +4,8 @@ let activeTab = null;
 const tabs = {};
 let groups = [];
 let usernames = [];
+const unreadCounts = {};
+const deletedChats = new Set(); // <- NIEUW: bijhouden welke chats verwijderd zijn
 
 const loginScreen = document.getElementById("loginScreen");
 const enterChat = document.getElementById("enterChat");
@@ -17,6 +19,15 @@ const messagesDiv = document.getElementById("messages");
 const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const groupsList = document.getElementById("groupsList");
+
+// Audio notificatie
+function playNotification() {
+  const audio = document.getElementById("notifSound");
+  if (audio) {
+    audio.currentTime = 0;
+    audio.play();
+  }
+}
 
 // Login
 enterChat.onclick = () => {
@@ -34,13 +45,15 @@ enterChat.onclick = () => {
 createRoomBtn.onclick = () => {
   const room = newRoomInput.value.trim();
   if (!room) return;
+  // Bij opnieuw toevoegen: uit deleted halen!
+  deletedChats.delete(room);
   socket.emit("join room", room);
   newRoomInput.value = "";
 };
 
-// Ontvang alleen JOUW groepen
+// Alleen JOUW groepen ontvangen
 socket.on("joined room", (myRooms) => {
-  groups = myRooms.filter(room => !usernames.includes(room));
+  groups = myRooms.filter(room => !usernames.includes(room) && !deletedChats.has(room));
   renderGroups();
 });
 
@@ -56,6 +69,8 @@ messageInput.addEventListener("keydown", function(e) {
 sendBtn.onclick = () => {
   const text = messageInput.value.trim();
   if (!text || !activeTab) return;
+  // Als chat verwijderd is, mag je niet verzenden
+  if (deletedChats.has(activeTab)) return;
   socket.emit("chat message", { tab: activeTab, text });
   messageInput.value = "";
 };
@@ -63,34 +78,54 @@ sendBtn.onclick = () => {
 // Gebruikerslijst en usernames bijwerken
 socket.on("all users", (users) => {
   usernames = users.map(u => u.name);
-  allUsersList.innerHTML = "";
-  users.forEach(u => {
-    if (u.name === username) return;
-    allUsersList.appendChild(createChatItem(u.name, false));
-  });
+  renderUsers();
 });
 
-// Berichten ontvangen
+// Berichten ontvangen + ongelezen badge + melding
 socket.on("chat message", (msg) => {
+  // Als chat verwijderd is, negeer bericht
+  if (deletedChats.has(msg.tab)) return;
+
   if (!tabs[msg.tab]) tabs[msg.tab] = [];
   tabs[msg.tab].push(msg);
-  if (msg.tab === activeTab) renderMessages();
-  // Alleen kamer toevoegen aan groepen als het GEEN gebruikersnaam is:
-  if (!groups.includes(msg.tab) && !usernames.includes(msg.tab)) {
-    groups.push(msg.tab);
+
+  if (msg.tab === activeTab) {
+    renderMessages();
+    unreadCounts[msg.tab] = 0; // alles gelezen
+  } else {
+    unreadCounts[msg.tab] = (unreadCounts[msg.tab] || 0) + 1;
     renderGroups();
+    renderUsers();
+    playNotification();
+
+    // Browser notificatie
+    if (window.Notification && Notification.permission === "granted") {
+      new Notification("Nieuw bericht in " + msg.tab, { body: msg.text });
+    } else if (window.Notification && Notification.permission !== "denied") {
+      Notification.requestPermission();
+    }
   }
 });
 
 // Chat-tab wisselen
 function switchTab(tab) {
+  // Als chat verwijderd is, mag je niet openen
+  if (deletedChats.has(tab)) return;
   activeTab = tab;
   chatHeader.textContent = tab;
+  unreadCounts[tab] = 0;
   renderMessages();
+  renderGroups();
+  renderUsers();
+  // Als het een chat was die eerder verwijderd was en je joint hem opnieuw: niet meer verwijderd
+  deletedChats.delete(tab);
 }
 
 // Chat-item (gebruikt voor zowel gebruikers als groepen)
 function createChatItem(name, isGroup = false) {
+  // Als chat verwijderd is, niet tonen
+  if (deletedChats.has(name)) return document.createComment("verwijderde chat");
+
   const li = document.createElement("li");
   li.classList.add("chat-item");
   if (name === activeTab) li.classList.add("active");
@@ -101,12 +136,27 @@ function createChatItem(name, isGroup = false) {
   span.style.flex = "1";
   span.style.cursor = "pointer";
   span.onclick = (e) => {
+    if (deletedChats.has(name)) return; // niet openen!
     if (!tabs[name]) tabs[name] = [];
     switchTab(name);
-    if (isGroup) socket.emit("join room", name);
+    if (isGroup) {
+      // Bij opnieuw openen via groep: verwijder uit deleted
+      deletedChats.delete(name);
+      socket.emit("join room", name);
+    }
     closeAllMenus();
     e.stopPropagation();
   };
+
+  // Ongelezen badge (rechts van naam)
+  const badge = document.createElement("span");
+  badge.className = "chat-unread-badge";
+  if (unreadCounts[name] > 0) {
+    badge.textContent = unreadCounts[name];
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
 
   // 3-stipjes knop (rechts)
   const menuBtn = document.createElement("button");
@@ -121,36 +171,38 @@ function createChatItem(name, isGroup = false) {
   // Opties-menu
   const chatMenu = document.createElement("div");
   chatMenu.className = "chat-menu";
-
-  // Chat verwijderen optie
   const removeOption = document.createElement("div");
   removeOption.className = "chat-menu-option";
   removeOption.textContent = "Chat verwijderen";
   removeOption.onclick = function(e) {
     e.stopPropagation();
+    // Voeg toe aan verwijderlijst
+    deletedChats.add(name);
+    // Haal uit groepen/tabbladen en ongelezen
     if (isGroup) {
       groups = groups.filter(g => g !== name);
       renderGroups();
     }
     delete tabs[name];
+    delete unreadCounts[name];
     if (activeTab === name) {
       activeTab = null;
       chatHeader.textContent = "Geen chat geselecteerd";
       messagesDiv.innerHTML = "";
     }
+    renderGroups();
+    renderUsers();
     closeAllMenus();
   };
-
   chatMenu.appendChild(removeOption);
 
   // Samenstellen
   li.appendChild(span);
+  li.appendChild(badge);
   li.appendChild(menuBtn);
   li.appendChild(chatMenu);
 
-  // Sluit menu bij verlaten
   li.addEventListener("mouseleave", closeAllMenus);
-
   return li;
 }
 
@@ -162,7 +214,18 @@ function closeAllMenus() {
 function renderGroups() {
   groupsList.innerHTML = "";
   groups.forEach(room => {
-    groupsList.appendChild(createChatItem(room, true));
+    const groupItem = createChatItem(room, true);
+    if (groupItem) groupsList.appendChild(groupItem);
+  });
+}
+
+// Gebruikers tonen (met badge)
+function renderUsers() {
+  allUsersList.innerHTML = "";
+  usernames.forEach(name => {
+    if (name === username) return;
+    const userItem = createChatItem(name, false);
+    if (userItem) allUsersList.appendChild(userItem);
   });
 }
 
@@ -187,4 +250,9 @@ function renderMessages() {
     messagesDiv.appendChild(div);
   });
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// Vraag bij starten om notificatie rechten
+if (window.Notification && Notification.permission !== "granted") {
+  Notification.requestPermission();
 }
