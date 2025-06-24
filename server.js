@@ -5,39 +5,38 @@ const io = require("socket.io")(http);
 app.use(express.static("public"));
 
 const users = {}; // socket.id => { name, color }
-const userColors = {};
 const colorList = [
   "#ff3b30", "#ff9500", "#ffcc00", "#34c759", "#007aff", "#5856d6", "#af52de", "#ff2d55"
 ];
-const rooms = new Set(); // groepenlijst
 
 function getRandomColor() {
   return colorList[Math.floor(Math.random() * colorList.length)];
 }
 
 io.on("connection", (socket) => {
+  socket.join(socket.id); // Eigen room voor privéberichten
+  socket.myRooms = new Set(); // Lokaal bijhouden welke rooms deze socket joined heeft
+
   socket.on("register", (name) => {
     const color = getRandomColor();
     users[socket.id] = { name, color };
-    userColors[name] = color;
     io.emit("all users", Object.values(users));
-    socket.emit("all rooms", Array.from(rooms));
+    // geen rooms sturen
   });
 
   socket.on("join room", (room) => {
     socket.join(room);
-    rooms.add(room);
-    io.emit("all rooms", Array.from(rooms));
+    socket.myRooms.add(room);
+    socket.emit("joined room", Array.from(socket.myRooms)); // stuur alleen deze gebruiker zijn eigen rooms
   });
 
   socket.on("get rooms", () => {
-    socket.emit("all rooms", Array.from(rooms));
+    socket.emit("joined room", Array.from(socket.myRooms));
   });
 
   socket.on("chat message", ({ tab, text }) => {
     const user = users[socket.id];
     if (user && text.trim()) {
-      // Privéchat
       const isPrivate = Object.values(users).some(u => u.name === tab);
       if (isPrivate) {
         const target = Object.entries(users).find(([sid, u]) => u.name === tab);
@@ -57,7 +56,6 @@ io.on("connection", (socket) => {
           });
         }
       } else {
-        // Groepschat
         io.to(tab).emit("chat message", {
           tab,
           user: user.name,
