@@ -2,14 +2,25 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <title>Chat App</title>
+  <title>Chat met gebruikerslijst</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h2>Chat</h2>
-  <div id="messages"></div>
-  <input id="messageInput" placeholder="Typ een bericht..." autocomplete="off" />
-  <button onclick="sendMessage()">Verstuur</button>
+  <div class="container">
+    <div class="sidebar">
+      <h2>Gebruikers</h2>
+      <ul id="userList"></ul>
+    </div>
+
+    <div class="chat-area">
+      <div class="chat-header" id="chatHeader">Chat</div>
+      <div id="messages" class="chat-messages"></div>
+      <div class="chat-input">
+        <input id="messageInput" type="text" placeholder="Typ een bericht..." autocomplete="off" />
+        <button onclick="sendMessage()">Verstuur</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
