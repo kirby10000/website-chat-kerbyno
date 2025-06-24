@@ -6,11 +6,16 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- Overlay voor naam en groep -->
   <div id="usernameOverlay" class="overlay">
     <div class="username-box">
-      <h2>Welkom! Wat is je naam?</h2>
-      <input type="text" id="usernameInput" placeholder="Typ je naam..." />
-      <button onclick="submitUsername()">Start chat</button>
+      <h2>Welkom! Vul je naam en kies een groep:</h2>
+      <input type="text" id="usernameInput" placeholder="Je naam" /><br />
+      <select id="roomSelect">
+        <option value="">-- Kies een groep --</option>
+      </select><br />
+      <input type="text" id="newRoomInput" placeholder="Of maak een nieuwe groep" /><br />
+      <button onclick="submitUsernameAndRoom()">Start chat</button>
     </div>
   </div>
 
@@ -31,6 +36,89 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js"></script>
+  <script>
+    const socket = io();
+    let username = "";
+    let room = "";
+
+    socket.on("room list", (rooms) => {
+      const select = document.getElementById("roomSelect");
+      select.innerHTML = '<option value="">-- Kies een groep --</option>';
+      rooms.forEach(r => {
+        const option = document.createElement("option");
+        option.value = r;
+        option.textContent = r;
+        select.appendChild(option);
+      });
+    });
+
+    function submitUsernameAndRoom() {
+      const usernameField = document.getElementById("usernameInput");
+      const roomField = document.getElementById("roomSelect");
+      const newRoomField = document.getElementById("newRoomInput");
+      const name = usernameField.value.trim();
+      const selectedRoom = roomField.value;
+      const newRoom = newRoomField.value.trim();
+
+      if (name && (selectedRoom || newRoom)) {
+        username = name;
+        room = newRoom || selectedRoom;
+        document.getElementById("usernameOverlay").style.display = "none";
+        document.getElementById("chatHeader").textContent = room;
+        socket.emit("join", { username, room });
+      }
+    }
+
+    document.getElementById("usernameInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") submitUsernameAndRoom();
+    });
+    document.getElementById("newRoomInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") submitUsernameAndRoom();
+    });
+    document.getElementById("roomSelect").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") submitUsernameAndRoom();
+    });
+
+    const messageInput = document.getElementById("messageInput");
+
+    function sendMessage() {
+      const msg = messageInput.value.trim();
+      if (msg) {
+        socket.emit("chat message", { room, text: msg });
+        messageInput.value = "";
+      }
+    }
+
+    messageInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    socket.on("chat message", ({ user, color, text }) => {
+      const messageEl = document.createElement("p");
+      const usernameEl = document.createElement("strong");
+
+      usernameEl.textContent = `${user}: `;
+      messageEl.appendChild(usernameEl);
+      messageEl.appendChild(document.createTextNode(text));
+      messageEl.style.backgroundColor = color;
+
+      document.getElementById("messages").appendChild(messageEl);
+      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+    });
+
+    socket.on("update users", (users) => {
+      const list = document.getElementById("userList");
+      list.innerHTML = "";
+      for (const user of users) {
+        const li = document.createElement("li");
+        li.textContent = user.name;
+        li.style.backgroundColor = user.color;
+        list.appendChild(li);
+      }
+    });
+  </script>
 </body>
 </html>
