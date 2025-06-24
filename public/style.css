@@ -260,3 +260,17 @@ body {
   background: #ffe1b3;
   color: #ff7f00;
 }
+
+/* 2. Ongelezen badge */
+.chat-unread-badge {
+  display: none;
+  min-width: 20px;
+  padding: 2px 7px;
+  font-size: 13px;
+  font-weight: bold;
+  color: white;
+  background: #ff3b30;
+  border-radius: 14px;
+  margin-left: 8px;
+  text-align: center;
+}
