@@ -1,6 +1,6 @@
 body {
   margin: 0;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #fff;
 }
 
@@ -24,6 +24,7 @@ body {
 #userList {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 #userList li {
@@ -32,6 +33,12 @@ body {
   border-radius: 8px;
   font-weight: bold;
   color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#userList li:hover {
+  filter: brightness(0.9);
 }
 
 .chat-area {
@@ -45,6 +52,39 @@ body {
   border-bottom: 1px solid #eee;
   background-color: #fff;
   font-weight: bold;
+}
+
+.chat-tabs {
+  display: flex;
+  background: #f0f0f0;
+  border-bottom: 1px solid #ddd;
+}
+
+.chat-tab {
+  padding: 10px 15px;
+  cursor: pointer;
+  user-select: none;
+  border-right: 1px solid #ddd;
+  font-weight: 600;
+  background: #eaeaea;
+  position: relative;
+  transition: background-color 0.3s ease;
+}
+
+.chat-tab.active {
+  background: white;
+  border-bottom: 2px solid #00bfff;
+}
+
+.chat-tab.has-unread::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: #00bfff;
+  border-radius: 50%;
 }
 
 .chat-messages {
@@ -90,6 +130,11 @@ body {
   border: none;
   border-radius: 20px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.chat-input button:hover {
+  background: #0099cc;
 }
 
 .overlay {
@@ -127,4 +172,17 @@ body {
   color: white;
   border-radius: 8px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.username-box button.btn-primary:hover {
+  background: #0099cc;
+}
+
+.username-box button.btn-secondary {
+  background: #666;
+}
+
+.username-box button.btn-secondary:hover {
+  background: #444;
 }
