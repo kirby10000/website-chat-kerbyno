@@ -41,7 +41,7 @@ io.on("connection", (socket) => {
       const fromUser = users[socket.id];
       const toUser = users[toSocketId];
       if (!fromUser || !toUser) return;
-      // Stuur naar ontvanger en ook naar afzender voor weergave
+      // Stuur naar ontvanger en afzender voor weergave
       io.to(toSocketId).emit("private message", {
         from: fromUser.name,
         fromId: socket.id,
@@ -82,12 +82,24 @@ io.on("connection", (socket) => {
     socket.emit("all users", allUsers);
   });
 
+  socket.on("request rooms", () => {
+    socket.emit("room list", Object.keys(rooms));
+  });
+
+  socket.on("create room", (roomName) => {
+    if (!rooms[roomName]) {
+      rooms[roomName] = {};
+      io.emit("room list", Object.keys(rooms));
+    }
+  });
+
   function updateRoomUsers(room) {
     const usersInRoom = Object.entries(rooms[room] || {}).map(([socketId, user]) => ({
       ...user,
       socketId,
     }));
     io.to(room).emit("update users", usersInRoom);
+    io.emit("room list", Object.keys(rooms));
   }
 });
 
