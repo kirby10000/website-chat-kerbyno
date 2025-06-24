@@ -2,15 +2,19 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <title>Chat App</title>
+  <title>Chat App Login</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Jouw bestaande HTML voor de chat-app -->
-  <div id="loginScreen" class="fullscreen login-box">
-    <h2>Login</h2>
-    <input id="usernameInput" type="text" placeholder="Gebruikersnaam">
-    <button id="enterChat">Start Chatten</button>
+  <div id="loginScreen" class="login-bg">
+    <div class="login-center">
+      <div class="login-card">
+        <h2>Welkom!</h2>
+        <p>Vul je naam in om de chat te starten</p>
+        <input id="usernameInput" type="text" placeholder="Jouw naam..." autocomplete="off" autofocus>
+        <button id="enterChat">Start Chatten</button>
+      </div>
+    </div>
   </div>
   <div class="app hidden">
     <div class="sidebar">
@@ -30,10 +34,7 @@
       </div>
     </div>
   </div>
-
-  <!-- Audio notificatie -->
   <audio id="notifSound" src="https://notificationsounds.com/storage/sounds/file-sounds-1156-pristine.mp3" preload="auto"></audio>
-
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>
