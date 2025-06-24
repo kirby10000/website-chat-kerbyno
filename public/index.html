@@ -1,40 +1,38 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <title>Snapchat Style Chat</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Chat App</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="loginScreen" class="fullscreen">
-    <div class="login-box">
-      <h2>Wat is je naam?</h2>
-      <input type="text" id="usernameInput" placeholder="Typ je naam..." />
-      <button id="enterChat">Start</button>
-    </div>
+  <!-- Jouw bestaande HTML voor de chat-app -->
+  <div id="loginScreen" class="fullscreen login-box">
+    <h2>Login</h2>
+    <input id="usernameInput" type="text" placeholder="Gebruikersnaam">
+    <button id="enterChat">Start Chatten</button>
   </div>
-
   <div class="app hidden">
     <div class="sidebar">
-      <h3>Maak of join een groep</h3>
-      <input type="text" id="newRoomInput" placeholder="Nieuwe groep...">
-      <button id="createRoom">+ Maak of join groep</button>
-
+      <input id="newRoomInput" type="text" placeholder="Nieuwe groep...">
+      <button id="createRoom">Maak groep</button>
       <h3>Groepen</h3>
       <ul id="groupsList"></ul>
-
       <h3>Alle gebruikers en chats</h3>
       <ul id="allUsersList"></ul>
     </div>
     <div class="main">
       <div class="chat-header" id="chatHeader">Geen chat geselecteerd</div>
-      <div id="messages" class="chat-messages"></div>
+      <div class="chat-messages" id="messages"></div>
       <div class="chat-input">
-        <input id="messageInput" type="text" placeholder="Typ een bericht..." />
-        <button id="sendBtn">📩</button>
+        <input id="messageInput" type="text" placeholder="Typ een bericht...">
+        <button id="sendBtn">Verstuur</button>
       </div>
     </div>
   </div>
+
+  <!-- Audio notificatie -->
+  <audio id="notifSound" src="https://notificationsounds.com/storage/sounds/file-sounds-1156-pristine.mp3" preload="auto"></audio>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
