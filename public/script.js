@@ -1,9 +1,8 @@
-// ✅ script.js
 const socket = io();
 let username = "";
 let activeTab = null;
 const tabs = {};
-let groups = []; // lijst met groepen
+let groups = [];
 
 const loginScreen = document.getElementById("loginScreen");
 const enterChat = document.getElementById("enterChat");
@@ -18,6 +17,7 @@ const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const groupsList = document.getElementById("groupsList");
 
+// Login
 enterChat.onclick = () => {
   const name = usernameInput.value.trim();
   if (!name) return;
@@ -26,21 +26,26 @@ enterChat.onclick = () => {
   app.classList.remove("hidden");
   socket.emit("register", name);
   socket.emit("get users");
+  socket.emit("get rooms");
 };
 
+// Groep aanmaken/joinen
 createRoomBtn.onclick = () => {
   const room = newRoomInput.value.trim();
   if (!room) return;
-  if (!tabs[room]) tabs[room] = [];
-  if (!groups.includes(room)) {
-    groups.push(room);
-    renderGroups();
-  }
-  switchTab(room);
   socket.emit("join room", room);
   newRoomInput.value = "";
 };
 
+// Enter om te versturen (Shift+Enter ondersteunt geen nieuwe regels)
+messageInput.addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendBtn.click();
+  }
+});
+
+// Verzenden knop
 sendBtn.onclick = () => {
   const text = messageInput.value.trim();
   if (!text || !activeTab) return;
@@ -48,19 +53,18 @@ sendBtn.onclick = () => {
   messageInput.value = "";
 };
 
-// Enter indrukken om te versturen
-messageInput.addEventListener("keydown", function(e) {
-  if (e.key === "Enter") {
-    sendBtn.click();
-  }
-});
-
+// Ontvang bericht
 socket.on("chat message", (msg) => {
   if (!tabs[msg.tab]) tabs[msg.tab] = [];
   tabs[msg.tab].push(msg);
   if (msg.tab === activeTab) renderMessages();
+  if (!groups.includes(msg.tab) && msg.tab !== username) {
+    groups.push(msg.tab);
+    renderGroups();
+  }
 });
 
+// Ontvang gebruikerslijst
 socket.on("all users", (users) => {
   allUsersList.innerHTML = "";
   users.forEach(u => {
@@ -76,11 +80,30 @@ socket.on("all users", (users) => {
   });
 });
 
+// Ontvang groepenlijst
+socket.on("all rooms", (serverGroups) => {
+  groups = serverGroups;
+  renderGroups();
+});
+
+// Wissel van chat-tab
+function switchTab(tab) {
+  activeTab = tab;
+  chatHeader.textContent = tab;
+  renderMessages();
+  if (!groups.includes(tab) && tab !== username) {
+    groups.push(tab);
+    renderGroups();
+  }
+}
+
+// Groepen tonen
 function renderGroups() {
   groupsList.innerHTML = "";
   groups.forEach(room => {
     const li = document.createElement("li");
     li.classList.add("chat-item");
+    if (room === activeTab) li.classList.add("active");
     li.textContent = room;
     li.onclick = () => {
       if (!tabs[room]) tabs[room] = [];
@@ -91,12 +114,7 @@ function renderGroups() {
   });
 }
 
-function switchTab(tab) {
-  activeTab = tab;
-  chatHeader.textContent = tab;
-  renderMessages();
-}
-
+// Berichten tonen
 function renderMessages() {
   messagesDiv.innerHTML = "";
   if (!tabs[activeTab]) return;
