@@ -1,4 +1,3 @@
-// ✅ server.js
 const express = require("express");
 const app = express();
 const http = require("http").createServer(app);
@@ -10,6 +9,7 @@ const userColors = {};
 const colorList = [
   "#ff3b30", "#ff9500", "#ffcc00", "#34c759", "#007aff", "#5856d6", "#af52de", "#ff2d55"
 ];
+const rooms = new Set(); // groepenlijst
 
 function getRandomColor() {
   return colorList[Math.floor(Math.random() * colorList.length)];
@@ -21,32 +21,36 @@ io.on("connection", (socket) => {
     users[socket.id] = { name, color };
     userColors[name] = color;
     io.emit("all users", Object.values(users));
+    socket.emit("all rooms", Array.from(rooms));
   });
 
   socket.on("join room", (room) => {
     socket.join(room);
+    rooms.add(room);
+    io.emit("all rooms", Array.from(rooms));
+  });
+
+  socket.on("get rooms", () => {
+    socket.emit("all rooms", Array.from(rooms));
   });
 
   socket.on("chat message", ({ tab, text }) => {
     const user = users[socket.id];
     if (user && text.trim()) {
-      // Controleer of het een privéchat of groepschat is
+      // Privéchat
       const isPrivate = Object.values(users).some(u => u.name === tab);
       if (isPrivate) {
-        // Vind de socket van de ontvanger
         const target = Object.entries(users).find(([sid, u]) => u.name === tab);
         if (target) {
           const [targetSocketId] = target;
-          // Stuur naar de ontvanger
           io.to(targetSocketId).emit("chat message", {
-            tab: user.name, // bij de ontvanger komt het in het tabblad van de afzender
+            tab: user.name,
             user: user.name,
             text,
             color: user.color
           });
-          // Stuur ook naar jezelf, zodat het in je eigen chat blijft staan
           socket.emit("chat message", {
-            tab: tab, // bij jezelf komt het in het tabblad van de ontvanger
+            tab: tab,
             user: user.name,
             text,
             color: user.color
