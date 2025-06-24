@@ -2,10 +2,18 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <title>Chat met gebruikerslijst</title>
+  <title>Chat App - Snap Style</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="usernameOverlay" class="overlay">
+    <div class="username-box">
+      <h2>Welkom! Wat is je naam?</h2>
+      <input type="text" id="usernameInput" placeholder="Typ je naam..." />
+      <button onclick="submitUsername()">Start chat</button>
+    </div>
+  </div>
+
   <div class="container">
     <div class="sidebar">
       <h2>Gebruikers</h2>
@@ -17,7 +25,7 @@
       <div id="messages" class="chat-messages"></div>
       <div class="chat-input">
         <input id="messageInput" type="text" placeholder="Typ een bericht..." autocomplete="off" />
-        <button onclick="sendMessage()">Verstuur</button>
+        <button onclick="sendMessage()">📩</button>
       </div>
     </div>
   </div>
