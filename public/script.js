@@ -3,6 +3,7 @@ let username = "";
 let activeTab = null;
 const tabs = {};
 let groups = [];
+let usernames = [];
 
 const loginScreen = document.getElementById("loginScreen");
 const enterChat = document.getElementById("enterChat");
@@ -37,6 +38,12 @@ createRoomBtn.onclick = () => {
   newRoomInput.value = "";
 };
 
+// Ontvang alleen JOUW groepen
+socket.on("joined room", (myRooms) => {
+  groups = myRooms.filter(room => !usernames.includes(room));
+  renderGroups();
+});
+
 // Enter om te versturen (Shift+Enter ondersteunt geen nieuwe regels)
 messageInput.addEventListener("keydown", function(e) {
   if (e.key === "Enter" && !e.shiftKey) {
@@ -53,64 +60,109 @@ sendBtn.onclick = () => {
   messageInput.value = "";
 };
 
-// Ontvang bericht
+// Gebruikerslijst en usernames bijwerken
+socket.on("all users", (users) => {
+  usernames = users.map(u => u.name);
+  allUsersList.innerHTML = "";
+  users.forEach(u => {
+    if (u.name === username) return;
+    allUsersList.appendChild(createChatItem(u.name, false));
+  });
+});
+
+// Berichten ontvangen
 socket.on("chat message", (msg) => {
   if (!tabs[msg.tab]) tabs[msg.tab] = [];
   tabs[msg.tab].push(msg);
   if (msg.tab === activeTab) renderMessages();
-  if (!groups.includes(msg.tab) && msg.tab !== username) {
+  // Alleen kamer toevoegen aan groepen als het GEEN gebruikersnaam is:
+  if (!groups.includes(msg.tab) && !usernames.includes(msg.tab)) {
     groups.push(msg.tab);
     renderGroups();
   }
 });
 
-// Ontvang gebruikerslijst
-socket.on("all users", (users) => {
-  allUsersList.innerHTML = "";
-  users.forEach(u => {
-    if (u.name === username) return;
-    const li = document.createElement("li");
-    li.classList.add("chat-item");
-    li.textContent = u.name;
-    li.onclick = () => {
-      if (!tabs[u.name]) tabs[u.name] = [];
-      switchTab(u.name);
-    };
-    allUsersList.appendChild(li);
-  });
-});
-
-// Ontvang groepenlijst
-socket.on("all rooms", (serverGroups) => {
-  groups = serverGroups;
-  renderGroups();
-});
-
-// Wissel van chat-tab
+// Chat-tab wisselen
 function switchTab(tab) {
   activeTab = tab;
   chatHeader.textContent = tab;
   renderMessages();
-  if (!groups.includes(tab) && tab !== username) {
-    groups.push(tab);
-    renderGroups();
-  }
+}
+
+// Chat-item (gebruikt voor zowel gebruikers als groepen)
+function createChatItem(name, isGroup = false) {
+  const li = document.createElement("li");
+  li.classList.add("chat-item");
+  if (name === activeTab) li.classList.add("active");
+
+  // Naam (links)
+  const span = document.createElement("span");
+  span.textContent = name;
+  span.style.flex = "1";
+  span.style.cursor = "pointer";
+  span.onclick = (e) => {
+    if (!tabs[name]) tabs[name] = [];
+    switchTab(name);
+    if (isGroup) socket.emit("join room", name);
+    closeAllMenus();
+    e.stopPropagation();
+  };
+
+  // 3-stipjes knop (rechts)
+  const menuBtn = document.createElement("button");
+  menuBtn.className = "chat-menu-btn";
+  menuBtn.innerHTML = "&#8942;";
+  menuBtn.onclick = function(e) {
+    e.stopPropagation();
+    closeAllMenus();
+    chatMenu.classList.toggle("active");
+  };
+
+  // Opties-menu
+  const chatMenu = document.createElement("div");
+  chatMenu.className = "chat-menu";
+
+  // Chat verwijderen optie
+  const removeOption = document.createElement("div");
+  removeOption.className = "chat-menu-option";
+  removeOption.textContent = "Chat verwijderen";
+  removeOption.onclick = function(e) {
+    e.stopPropagation();
+    if (isGroup) {
+      groups = groups.filter(g => g !== name);
+      renderGroups();
+    }
+    delete tabs[name];
+    if (activeTab === name) {
+      activeTab = null;
+      chatHeader.textContent = "Geen chat geselecteerd";
+      messagesDiv.innerHTML = "";
+    }
+    closeAllMenus();
+  };
+
+  chatMenu.appendChild(removeOption);
+
+  // Samenstellen
+  li.appendChild(span);
+  li.appendChild(menuBtn);
+  li.appendChild(chatMenu);
+
+  // Sluit menu bij verlaten
+  li.addEventListener("mouseleave", closeAllMenus);
+
+  return li;
+}
+
+function closeAllMenus() {
+  document.querySelectorAll(".chat-menu.active").forEach(menu => menu.classList.remove("active"));
 }
 
 // Groepen tonen
 function renderGroups() {
   groupsList.innerHTML = "";
   groups.forEach(room => {
-    const li = document.createElement("li");
-    li.classList.add("chat-item");
-    if (room === activeTab) li.classList.add("active");
-    li.textContent = room;
-    li.onclick = () => {
-      if (!tabs[room]) tabs[room] = [];
-      switchTab(room);
-      socket.emit("join room", room);
-    };
-    groupsList.appendChild(li);
+    groupsList.appendChild(createChatItem(room, true));
   });
 }
 
