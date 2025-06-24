@@ -104,25 +104,42 @@ body, html {
   min-height: 100vh;
   min-width: 100vw;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   background: none;
 }
 
 .chat-container {
   display: flex;
-  gap: 36px;
-  justify-content: center;
-  align-items: flex-start;
+  align-items: stretch;
+  justify-content: flex-start;
+  /* Plaats geheel links en centreer verticaal met even veel ruimte boven/onder */
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100vh;
   width: 100vw;
-  height: 93vh;
-  max-width: 1350px;
+  pointer-events: none; /* zorgt dat alleen children aanklikbaar zijn */
 }
 
-/* Sidebar: los wit blok met schaduw en afgeronde hoeken */
+.chat-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+  height: 80vh;
+  max-height: 800px;
+  min-height: 500px;
+  margin-top: auto;
+  margin-bottom: auto;
+  margin-left: 48px;
+  margin-right: 0;
+  pointer-events: all;
+}
+
 .sidebar {
   background: #fff;
-  border-radius: 22px;
+  border-radius: 22px 0 0 22px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.14);
   padding: 28px 18px 18px 18px;
   width: 260px;
@@ -131,8 +148,8 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 500px;
-  margin-bottom: 16px;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .sidebar input,
@@ -216,29 +233,27 @@ body, html {
 /* Main chatvenster: los wit blok met schaduw en afgeronde hoeken */
 .main {
   background: #fff;
-  border-radius: 22px;
+  border-radius: 0 22px 22px 0;
   box-shadow: 0 8px 32px rgba(0,0,0,0.12);
   display: flex;
   flex-direction: column;
   min-width: 350px;
   max-width: 700px;
   width: 500px;
-  height: 580px;
+  height: 100%;
   overflow: hidden;
   position: relative;
 }
 
-/* Chat header */
 .chat-header {
   padding: 20px 32px 18px 32px;
   font-weight: bold;
   border-bottom: 1px solid #eee;
   font-size: 21px;
   background: #fafafa;
-  border-radius: 22px 22px 0 0;
+  border-radius: 0 22px 0 0;
 }
 
-/* Berichtenlijst */
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -249,13 +264,12 @@ body, html {
   background-color: #fff;
 }
 
-/* Inputbalk: los wit blok met schaduw en afgeronde hoeken */
 .chat-input {
   display: flex;
   gap: 10px;
   padding: 14px;
   background: #fff;
-  border-radius: 16px;
+  border-radius: 0 0 16px 16px;
   box-shadow: 0 3px 12px 0 rgba(255,127,0,0.07);
   margin: 16px;
   margin-bottom: 24px;
@@ -356,11 +370,13 @@ body, html {
 }
 
 @media (max-width: 1000px) {
-  .chat-container { flex-direction: column; gap: 20px;}
-  .sidebar, .main { width: 90vw; max-width: 99vw; }
+  .chat-container { position:static; height:100vh; }
+  .chat-inner { margin-left: 0; }
+  .sidebar, .main { width: 90vw !important; max-width: 99vw; }
   .main { min-width: 0; }
 }
 @media (max-width: 600px) {
   .chat-container { flex-direction: column; gap: 12px;}
-  .sidebar, .main { border-radius: 16px; width: 98vw; }
+  .chat-inner { flex-direction: column; height:90vh; }
+  .sidebar, .main { border-radius: 16px; width: 98vw !important; }
 }
