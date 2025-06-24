@@ -1,92 +1,146 @@
-const express = require("express");
-const app = express();
-const http = require("http").createServer(app);
-const io = require("socket.io")(http);
-app.use(express.static("public"));
+const socket = io();
 
-const users = {}; // socket.id => { name, color, rooms: Set }
-const pastelColors = [
-  "#AEE4FF", "#BDF5D7", "#FFF5B7", "#FFD6C4", "#E6D6FF", "#FFC9DE"
-];
+const loginScreen = document.getElementById("loginScreen");
+const enterChatBtn = document.getElementById("enterChat");
+const usernameInput = document.getElementById("usernameInput");
+const app = document.querySelector(".app");
 
-function getRandomColor() {
-  return pastelColors[Math.floor(Math.random() * pastelColors.length)];
+const newRoomInput = document.getElementById("newRoomInput");
+const createRoomBtn = document.getElementById("createRoom");
+const allUsersList = document.getElementById("allUsersList");
+
+const chatTabs = document.getElementById("chatTabs");
+const chatHeader = document.getElementById("chatHeader");
+const messagesDiv = document.getElementById("messages");
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+
+let username = null;
+let activeTab = null; // naam van actieve chat tab
+const tabs = {}; // tabnaam => array met berichten
+
+// --- STARTKNOP ---
+
+enterChatBtn.addEventListener("click", () => {
+  const name = usernameInput.value.trim();
+  if (!name) {
+    alert("Typ alsjeblieft een naam in.");
+    return;
+  }
+  username = name;
+  socket.emit("register", username);
+
+  loginScreen.classList.add("hidden");
+  app.classList.remove("hidden");
+
+  socket.emit("get users");
+});
+
+// --- GROEP MAKEN ---
+
+createRoomBtn.addEventListener("click", () => {
+  const room = newRoomInput.value.trim();
+  if (!room) return;
+  if (tabs[room]) {
+    alert("Deze groep bestaat al.");
+    return;
+  }
+  tabs[room] = [];
+  addChatTab(room);
+  setActiveTab(room);
+  socket.emit("join room", room);
+  newRoomInput.value = "";
+});
+
+// --- BERICHTEN STUREN ---
+
+sendBtn.addEventListener("click", sendMessage);
+messageInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") sendMessage();
+});
+
+function sendMessage() {
+  const text = messageInput.value.trim();
+  if (!text || !activeTab) return;
+  socket.emit("chat message", { tab: activeTab, text });
+  messageInput.value = "";
 }
 
-// Hulpfunctie om privé-kamernaam te maken (alfabetisch)
-function makePrivateRoomName(u1, u2) {
-  return [u1, u2].sort().join("_");
+// --- TABBEHEER ---
+
+function addChatTab(name) {
+  if (tabs[name]) return; // tab bestaat al
+  tabs[name] = [];
+  const tab = document.createElement("div");
+  tab.classList.add("chat-tab");
+  tab.textContent = name;
+  tab.addEventListener("click", () => setActiveTab(name));
+  chatTabs.appendChild(tab);
 }
 
-io.on("connection", (socket) => {
-  console.log("Verbonden:", socket.id);
-
-  socket.on("register", (name) => {
-    users[socket.id] = { name, color: getRandomColor(), rooms: new Set() };
-    io.emit("all users", Object.values(users).map(u => ({ name: u.name, color: u.color })));
+function setActiveTab(name) {
+  activeTab = name;
+  chatHeader.textContent = name;
+  Array.from(chatTabs.children).forEach(tab => {
+    tab.classList.toggle("active", tab.textContent === name);
   });
+  renderMessages();
+}
 
-  socket.on("join room", (room) => {
-    if (!users[socket.id]) return;
-    socket.join(room);
-    users[socket.id].rooms.add(room);
-    console.log(`${users[socket.id].name} heeft ${room} betreden`);
+// --- BERICHTEN WEERGEVEN ---
+
+function renderMessages() {
+  messagesDiv.innerHTML = "";
+  if (!activeTab || !tabs[activeTab]) {
+    messagesDiv.textContent = "Geen chat geselecteerd.";
+    return;
+  }
+  tabs[activeTab].forEach(msg => {
+    const div = document.createElement("div");
+    div.classList.add("message");
+    div.style.backgroundColor = msg.color || "#dbeeff";
+    div.textContent = `${msg.user}: ${msg.text}`;
+    messagesDiv.appendChild(div);
   });
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
 
-  socket.on("leave room", (room) => {
-    if (!users[socket.id]) return;
-    socket.leave(room);
-    users[socket.id].rooms.delete(room);
-    console.log(`${users[socket.id].name} heeft ${room} verlaten`);
-  });
+// --- GEBRUIKERSLIJST ---
 
-  socket.on("chat message", ({ tab, text }) => {
-    const user = users[socket.id];
-    if (user && text.trim()) {
-      // Stuur alleen naar die room
-      io.to(tab).emit("chat message", {
-        tab,
-        user: user.name,
-        text,
-        color: user.color
-      });
-    }
-  });
+socket.on("all users", users => {
+  allUsersList.innerHTML = "";
+  users.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = u.name;
+    li.style.backgroundColor = u.color || "#ccc";
+    li.style.cursor = "pointer";
+    li.title = "Klik om privéchat te starten";
 
-  // Maak een privé-chat tussen 2 gebruikers
-  socket.on("start private chat", (otherUsername) => {
-    const user = users[socket.id];
-    if (!user) return;
+    li.addEventListener("click", () => {
+      if (u.name === username) return; // Niet met jezelf
+      socket.emit("start private chat", u.name);
+    });
 
-    // Vind socket.id van andere gebruiker
-    const otherSocketId = Object.keys(users).find(id => users[id].name === otherUsername);
-    if (!otherSocketId) return;
-
-    const roomName = makePrivateRoomName(user.name, otherUsername);
-
-    // Join beide sockets in die room
-    socket.join(roomName);
-    users[socket.id].rooms.add(roomName);
-
-    io.sockets.sockets.get(otherSocketId)?.join(roomName);
-    users[otherSocketId].rooms.add(roomName);
-
-    // Stuur naar deze client en andere dat ze de privé room hebben
-    socket.emit("private chat started", roomName, otherUsername);
-    io.to(otherSocketId).emit("private chat started", roomName, user.name);
-  });
-
-  socket.on("get users", () => {
-    socket.emit("all users", Object.values(users).map(u => ({ name: u.name, color: u.color })));
-  });
-
-  socket.on("disconnect", () => {
-    delete users[socket.id];
-    io.emit("all users", Object.values(users).map(u => ({ name: u.name, color: u.color })));
+    allUsersList.appendChild(li);
   });
 });
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-  console.log(`Server draait op http://localhost:${PORT}`);
+// --- CHATBERICHTEN ONTVANGEN ---
+
+socket.on("chat message", ({ tab, user, text, color }) => {
+  if (!tabs[tab]) {
+    addChatTab(tab);
+  }
+  tabs[tab].push({ user, text, color });
+  if (tab === activeTab) renderMessages();
+});
+
+// --- PRIVÉ CHAT GESTART ---
+
+socket.on("private chat started", (roomName, otherUsername) => {
+  if (!tabs[roomName]) {
+    addChatTab(roomName);
+  }
+  setActiveTab(roomName);
+  socket.emit("join room", roomName);
 });
