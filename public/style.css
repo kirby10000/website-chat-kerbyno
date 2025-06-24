@@ -25,6 +25,12 @@ body {
   text-align: center;
   max-width: 400px;
   width: 100%;
+  margin: auto;
+  position: relative;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .login-box h2 {
@@ -216,6 +222,7 @@ body {
   display: none;
 }
 
+/* 3-stipjes menu */
 .chat-menu-btn {
   background: none;
   border: none;
@@ -261,7 +268,7 @@ body {
   color: #ff7f00;
 }
 
-/* 2. Ongelezen badge */
+/* Ongelezen badge */
 .chat-unread-badge {
   display: none;
   min-width: 20px;
