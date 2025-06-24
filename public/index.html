@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <title>Minimal Chat</title>
+  <title>Snapchat Style Chat</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -16,10 +16,12 @@
 
   <div class="app hidden">
     <div class="sidebar">
-      <input type="text" id="newRoomInput" placeholder="Nieuwe groep..." />
+      <h3>Maak of join een groep</h3>
+      <input type="text" id="newRoomInput" placeholder="Nieuwe groep...">
       <button id="createRoom">+ Maak of join groep</button>
-      <h3>Chats</h3>
-      <ul id="chatList"></ul>
+
+      <h3>Alle gebruikers en chats</h3>
+      <ul id="allUsersList"></ul>
     </div>
     <div class="main">
       <div class="chat-header" id="chatHeader">Geen chat geselecteerd</div>
