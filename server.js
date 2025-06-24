@@ -4,7 +4,8 @@ const http = require("http").createServer(app);
 const io = require("socket.io")(http);
 app.use(express.static("public"));
 
-const userMap = {}; // socketId -> { name, room, color }
+const rooms = {}; // { roomName: { socketId: {name, color} } }
+const users = {}; // { socketId: {name, color, room} }
 
 function randomColor() {
   const colors = ["#ff6666", "#66ccff", "#66ff99", "#ffcc66", "#cc99ff", "#ff99cc"];
@@ -14,54 +15,83 @@ function randomColor() {
 io.on("connection", (socket) => {
   console.log("Verbonden:", socket.id);
 
-  socket.on("get rooms", () => {
-    const uniqueRooms = [...new Set(Object.values(userMap).map(u => u.room))];
-    socket.emit("room list", uniqueRooms);
-  });
-
   socket.on("join", ({ username, room }) => {
     socket.join(room);
+    if (!rooms[room]) rooms[room] = {};
     const color = randomColor();
-    userMap[socket.id] = { name: username, room, color };
+    rooms[room][socket.id] = { name: username, color };
+    users[socket.id] = { name: username, color, room };
 
     updateRoomUsers(room);
 
     socket.on("chat message", ({ room, text }) => {
-      io.to(room).emit("chat message", {
-        user: username,
-        color,
-        text
-      });
-    });
-
-    socket.on("private message", ({ to, text }) => {
-      const from = userMap[socket.id]?.name;
-      if (from && to) {
-        io.to(to).emit("private message", { from, text });
+      const user = rooms[room]?.[socket.id];
+      if (user) {
+        io.to(room).emit("chat message", {
+          user: user.name,
+          color: user.color,
+          text,
+          room,
+          type: "room",
+        });
       }
     });
 
+    socket.on("private message", ({ toSocketId, text }) => {
+      const fromUser = users[socket.id];
+      const toUser = users[toSocketId];
+      if (!fromUser || !toUser) return;
+      // Stuur naar ontvanger en ook naar afzender voor weergave
+      io.to(toSocketId).emit("private message", {
+        from: fromUser.name,
+        fromId: socket.id,
+        toId: toSocketId,
+        color: fromUser.color,
+        text,
+      });
+      socket.emit("private message", {
+        from: fromUser.name,
+        fromId: socket.id,
+        toId: toSocketId,
+        color: fromUser.color,
+        text,
+      });
+    });
+
     socket.on("disconnect", () => {
-      const info = userMap[socket.id];
-      if (info) {
-        delete userMap[socket.id];
-        updateRoomUsers(info.room);
+      if (rooms[users[socket.id]?.room]) {
+        const room = users[socket.id].room;
+        delete rooms[room][socket.id];
+        delete users[socket.id];
+        if (Object.keys(rooms[room]).length === 0) {
+          delete rooms[room];
+        } else {
+          updateRoomUsers(room);
+        }
       }
     });
   });
 
-  function updateRoomUsers(room) {
-    const users = [];
-    for (const [id, info] of Object.entries(userMap)) {
-      if (info.room === room) {
-        users.push({ id, name: info.name, color: info.color });
+  socket.on("request all users", () => {
+    const allUsers = [];
+    for (const [roomName, roomUsers] of Object.entries(rooms)) {
+      for (const [socketId, userData] of Object.entries(roomUsers)) {
+        allUsers.push({ name: userData.name, room: roomName, socketId });
       }
     }
-    io.to(room).emit("update users", users);
+    socket.emit("all users", allUsers);
+  });
+
+  function updateRoomUsers(room) {
+    const usersInRoom = Object.entries(rooms[room] || {}).map(([socketId, user]) => ({
+      ...user,
+      socketId,
+    }));
+    io.to(room).emit("update users", usersInRoom);
   }
 });
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-  console.log(`✅ Server draait op http://localhost:${PORT}`);
+  console.log(`Server draait op http://localhost:${PORT}`);
 });
