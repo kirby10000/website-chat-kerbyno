@@ -2,10 +2,11 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <title>Chat App Login</title>
+  <title>Chat App</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- LOGIN -->
   <div id="loginScreen" class="login-bg">
     <div class="login-center">
       <div class="login-card">
@@ -16,21 +17,24 @@
       </div>
     </div>
   </div>
+  <!-- CHAT APP -->
   <div class="app hidden">
-    <div class="sidebar">
-      <input id="newRoomInput" type="text" placeholder="Nieuwe groep...">
-      <button id="createRoom">Maak groep</button>
-      <h3>Groepen</h3>
-      <ul id="groupsList"></ul>
-      <h3>Alle gebruikers en chats</h3>
-      <ul id="allUsersList"></ul>
-    </div>
-    <div class="main">
-      <div class="chat-header" id="chatHeader">Geen chat geselecteerd</div>
-      <div class="chat-messages" id="messages"></div>
-      <div class="chat-input">
-        <input id="messageInput" type="text" placeholder="Typ een bericht...">
-        <button id="sendBtn">Verstuur</button>
+    <div class="chat-container">
+      <div class="sidebar">
+        <input id="newRoomInput" type="text" placeholder="Nieuwe groep...">
+        <button id="createRoom">Maak groep</button>
+        <h3>Groepen</h3>
+        <ul id="groupsList"></ul>
+        <h3>Alle gebruikers en chats</h3>
+        <ul id="allUsersList"></ul>
+      </div>
+      <div class="main">
+        <div class="chat-header" id="chatHeader">Geen chat geselecteerd</div>
+        <div class="chat-messages" id="messages"></div>
+        <div class="chat-input">
+          <input id="messageInput" type="text" placeholder="Typ een bericht...">
+          <button id="sendBtn">Verstuur</button>
+        </div>
       </div>
     </div>
   </div>
