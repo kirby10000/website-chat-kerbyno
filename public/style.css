@@ -51,15 +51,20 @@ body {
   flex: 1;
   padding: 15px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .chat-messages p {
   margin: 5px 0;
-  padding: 8px 12px;
+  padding: 10px 15px;
   border-radius: 15px;
-  display: inline-block;
   max-width: 70%;
   color: white;
+  display: block;
+  clear: both;
+  font-size: 15px;
 }
 
 .chat-input {
@@ -105,7 +110,8 @@ body {
   box-shadow: 0 0 10px rgba(0,0,0,0.2);
 }
 
-.username-box input {
+.username-box input,
+.username-box select {
   padding: 10px;
   width: 80%;
   margin-top: 10px;
