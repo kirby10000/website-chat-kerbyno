@@ -13,7 +13,7 @@ function randomColor() {
 }
 
 io.on("connection", (socket) => {
-  console.log("Nieuwe gebruiker verbonden:", socket.id);
+  console.log("Verbonden:", socket.id);
 
   socket.on("join", (name) => {
     users[socket.id] = { name, color: randomColor() };
