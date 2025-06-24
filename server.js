@@ -1,40 +1,36 @@
+// ✅ server.js
 const express = require("express");
 const app = express();
 const http = require("http").createServer(app);
-const { Server } = require("socket.io");
-const io = new Server(http);
-
+const io = require("socket.io")(http);
 app.use(express.static("public"));
 
-const users = {};
-const pastelColors = [
-  "#AEE4FF", "#BDF5D7", "#FFF5B7", "#FFD6C4", "#E6D6FF", "#FFC9DE"
+const users = {}; // socket.id => { name, color }
+const userColors = {};
+const colorList = [
+  "#ff3b30", "#ff9500", "#ffcc00", "#34c759", "#007aff", "#5856d6", "#af52de", "#ff2d55"
 ];
 
 function getRandomColor() {
-  return pastelColors[Math.floor(Math.random() * pastelColors.length)];
+  return colorList[Math.floor(Math.random() * colorList.length)];
 }
 
-function privateRoomName(a, b) {
-  return [a, b].sort().join("_");
-}
-
-io.on("connection", socket => {
-  socket.on("register", name => {
-    users[socket.id] = { name, color: getRandomColor(), rooms: new Set() };
-    io.emit("all users", Object.values(users).map(u => ({ name: u.name, color: u.color })));
+io.on("connection", (socket) => {
+  socket.on("register", (name) => {
+    const color = getRandomColor();
+    users[socket.id] = { name, color };
+    userColors[name] = color;
+    io.emit("all users", Object.values(users));
   });
 
-  socket.on("join room", room => {
-    if (!users[socket.id]) return;
+  socket.on("join room", (room) => {
     socket.join(room);
-    users[socket.id].rooms.add(room);
   });
 
   socket.on("chat message", ({ tab, text }) => {
     const user = users[socket.id];
     if (user && text.trim()) {
-      io.to(tab).emit("chat message", {
+      io.emit("chat message", {
         tab,
         user: user.name,
         text,
@@ -43,34 +39,13 @@ io.on("connection", socket => {
     }
   });
 
-  socket.on("start private chat", otherUser => {
-    const me = users[socket.id];
-    if (!me) return;
-    const otherId = Object.keys(users).find(id => users[id].name === otherUser);
-    if (!otherId) return;
-    const room = privateRoomName(me.name, otherUser);
-    socket.join(room);
-    users[socket.id].rooms.add(room);
-    io.to(otherId).emit("private chat started", room, me.name);
-    io.sockets.sockets.get(otherId)?.join(room);
-    users[otherId].rooms.add(room);
-    socket.emit("private chat started", room, otherUser);
-  });
-
   socket.on("get users", () => {
-    socket.emit("all users", Object.values(users).map(u => ({ name: u.name, color: u.color })));
-  });
-
-  socket.on("get joined rooms", () => {
-    const user = users[socket.id];
-    if (user) {
-      socket.emit("joined rooms", Array.from(user.rooms));
-    }
+    socket.emit("all users", Object.values(users));
   });
 
   socket.on("disconnect", () => {
     delete users[socket.id];
-    io.emit("all users", Object.values(users).map(u => ({ name: u.name, color: u.color })));
+    io.emit("all users", Object.values(users));
   });
 });
 
