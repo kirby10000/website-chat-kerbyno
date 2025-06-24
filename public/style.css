@@ -10,179 +10,18 @@ body {
 }
 
 .sidebar {
-  width: 200px;
+  width: 220px;
   background: #f7f7f7;
-  padding: 20px;
+  padding: 15px;
   border-right: 1px solid #ccc;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .sidebar h2 {
   margin-top: 0;
 }
 
-#userList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-#userList li {
-  padding: 6px 10px;
-  margin: 5px 0;
-  border-radius: 8px;
-  font-weight: bold;
-  color: white;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-#userList li:hover {
-  filter: brightness(0.9);
-}
-
-.chat-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.chat-header {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  background-color: #fff;
-  font-weight: bold;
-}
-
-.chat-tabs {
-  display: flex;
-  background: #f0f0f0;
-  border-bottom: 1px solid #ddd;
-}
-
-.chat-tab {
-  padding: 10px 15px;
-  cursor: pointer;
-  user-select: none;
-  border-right: 1px solid #ddd;
-  font-weight: 600;
-  background: #eaeaea;
-  position: relative;
-  transition: background-color 0.3s ease;
-}
-
-.chat-tab.active {
-  background: white;
-  border-bottom: 2px solid #00bfff;
-}
-
-.chat-tab.has-unread::after {
-  content: "";
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 8px;
-  height: 8px;
-  background: #00bfff;
-  border-radius: 50%;
-}
-
-.chat-messages {
-  flex: 1;
-  padding: 15px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.chat-messages p {
-  margin: 5px 0;
-  padding: 10px 15px;
-  border-radius: 15px;
-  max-width: 70%;
-  color: white;
-  display: block;
-  clear: both;
-  font-size: 15px;
-}
-
-.chat-input {
-  display: flex;
-  padding: 10px;
-  border-top: 1px solid #eee;
-  background-color: #fafafa;
-}
-
-.chat-input input {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 20px;
-  font-size: 16px;
-}
-
-.chat-input button {
-  margin-left: 10px;
-  padding: 10px 15px;
-  background: #00bfff;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.chat-input button:hover {
-  background: #0099cc;
-}
-
-.overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.username-box {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 0 10px rgba(0,0,0,0.2);
-}
-
-.username-box input,
-.username-box select {
-  padding: 10px;
-  width: 80%;
-  margin-top: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-.username-box button {
-  margin-top: 15px;
-  padding: 10px 20px;
-  background: #00bfff;
-  border: none;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.username-box button.btn-primary:hover {
-  background: #0099cc;
-}
-
-.username-box button.btn-secondary {
-  background: #666;
-}
-
-.username-box button.btn-secondary:hover {
-  background: #444;
-}
+#roomList, #user
