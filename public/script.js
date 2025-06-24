@@ -1,9 +1,16 @@
 const socket = io();
+let username = "";
 
-const messages = document.getElementById("messages");
-const input = document.getElementById("messageInput");
+while (!username) {
+  username = prompt("Wat is je naam?");
+}
 
+// Stuur je naam naar de server
+socket.emit("join", username);
+
+// Bericht versturen
 function sendMessage() {
+  const input = document.getElementById("messageInput");
   const msg = input.value.trim();
   if (msg !== "") {
     socket.emit("chat message", msg);
@@ -11,9 +18,22 @@ function sendMessage() {
   }
 }
 
-socket.on("chat message", (msg) => {
+// Ontvang een bericht
+socket.on("chat message", ({ user, color, text }) => {
   const p = document.createElement("p");
-  p.textContent = msg;
-  messages.appendChild(p);
-  messages.scrollTop = messages.scrollHeight;
+  p.textContent = `${user}: ${text}`;
+  p.style.backgroundColor = color;
+  document.getElementById("messages").appendChild(p);
+});
+
+// Update gebruikerslijst
+socket.on("update users", (users) => {
+  const list = document.getElementById("userList");
+  list.innerHTML = "";
+  for (const user of users) {
+    const li = document.createElement("li");
+    li.textContent = user.name;
+    li.style.backgroundColor = user.color;
+    list.appendChild(li);
+  }
 });
