@@ -1,4 +1,5 @@
-/* Algemene layout */
+/* ✅ style.css - Snapchat-stijl met felle kleuren en clean wit ontwerp */
+
 body {
   margin: 0;
   font-family: 'Segoe UI', sans-serif;
@@ -8,7 +9,6 @@ body {
   overflow: hidden;
 }
 
-/* Login scherm fullscreen */
 .fullscreen {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -19,7 +19,6 @@ body {
   z-index: 9999;
 }
 
-/* Login box */
 .login-box {
   background: white;
   padding: 40px;
@@ -60,7 +59,6 @@ body {
   background: #e76f00;
 }
 
-/* App layout */
 .app {
   display: flex;
   height: 100vh;
@@ -71,10 +69,10 @@ body {
   background: #ffffff;
   border-right: 1px solid #e0e0e0;
   padding: 20px;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
 }
 
 .sidebar input {
@@ -114,7 +112,6 @@ body {
   margin: 0;
 }
 
-/* Chatlijst-items */
 .chat-item {
   padding: 10px 14px;
   border-radius: 12px;
@@ -136,7 +133,6 @@ body {
   box-shadow: 0 0 0 3px rgba(255,127,0,0.2);
 }
 
-/* Main chatvenster */
 .main {
   flex: 1;
   display: flex;
@@ -159,18 +155,28 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  background-color: #ffffff;
 }
 
 .message {
-  padding: 12px 18px;
-  background-color: #ffefc1;
-  border-radius: 18px;
-  max-width: 65%;
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 10px 16px;
+  max-width: 70%;
   font-size: 15px;
-  color: #000;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
 }
 
-/* Inputveld onderaan */
+.message .sender {
+  font-weight: bold;
+  font-size: 12px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .chat-input {
   display: flex;
   padding: 16px;
