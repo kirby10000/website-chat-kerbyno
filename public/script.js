@@ -3,6 +3,7 @@ const socket = io();
 let username = "";
 let activeTab = null;
 const tabs = {};
+let groups = []; // lijst met groepen
 
 const loginScreen = document.getElementById("loginScreen");
 const enterChat = document.getElementById("enterChat");
@@ -15,6 +16,7 @@ const chatHeader = document.getElementById("chatHeader");
 const messagesDiv = document.getElementById("messages");
 const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
+const groupsList = document.getElementById("groupsList");
 
 enterChat.onclick = () => {
   const name = usernameInput.value.trim();
@@ -30,6 +32,10 @@ createRoomBtn.onclick = () => {
   const room = newRoomInput.value.trim();
   if (!room) return;
   if (!tabs[room]) tabs[room] = [];
+  if (!groups.includes(room)) {
+    groups.push(room);
+    renderGroups();
+  }
   switchTab(room);
   socket.emit("join room", room);
   newRoomInput.value = "";
@@ -41,6 +47,13 @@ sendBtn.onclick = () => {
   socket.emit("chat message", { tab: activeTab, text });
   messageInput.value = "";
 };
+
+// Enter indrukken om te versturen
+messageInput.addEventListener("keydown", function(e) {
+  if (e.key === "Enter") {
+    sendBtn.click();
+  }
+});
 
 socket.on("chat message", (msg) => {
   if (!tabs[msg.tab]) tabs[msg.tab] = [];
@@ -62,6 +75,21 @@ socket.on("all users", (users) => {
     allUsersList.appendChild(li);
   });
 });
+
+function renderGroups() {
+  groupsList.innerHTML = "";
+  groups.forEach(room => {
+    const li = document.createElement("li");
+    li.classList.add("chat-item");
+    li.textContent = room;
+    li.onclick = () => {
+      if (!tabs[room]) tabs[room] = [];
+      switchTab(room);
+      socket.emit("join room", room);
+    };
+    groupsList.appendChild(li);
+  });
+}
 
 function switchTab(tab) {
   activeTab = tab;
