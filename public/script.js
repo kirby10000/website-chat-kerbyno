@@ -1,24 +1,43 @@
 const socket = io();
 let username = "";
 
-while (!username) {
-  username = prompt("Wat is je naam?");
-}
-
-// Stuur je naam naar de server
-socket.emit("join", username);
-
-// Bericht versturen
-function sendMessage() {
-  const input = document.getElementById("messageInput");
-  const msg = input.value.trim();
-  if (msg !== "") {
-    socket.emit("chat message", msg);
-    input.value = "";
+// Naam overlay logica
+function submitUsername() {
+  const input = document.getElementById("usernameInput");
+  const name = input.value.trim();
+  if (name) {
+    username = name;
+    document.getElementById("usernameOverlay").style.display = "none";
+    socket.emit("join", username);
   }
 }
 
-// Ontvang een bericht
+// Enter voor naam
+document.getElementById("usernameInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    submitUsername();
+  }
+});
+
+// Bericht versturen met knop of enter
+const messageInput = document.getElementById("messageInput");
+
+function sendMessage() {
+  const msg = messageInput.value.trim();
+  if (msg !== "") {
+    socket.emit("chat message", msg);
+    messageInput.value = "";
+  }
+}
+
+messageInput.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// Berichten ontvangen
 socket.on("chat message", ({ user, color, text }) => {
   const p = document.createElement("p");
   p.textContent = `${user}: ${text}`;
@@ -26,7 +45,7 @@ socket.on("chat message", ({ user, color, text }) => {
   document.getElementById("messages").appendChild(p);
 });
 
-// Update gebruikerslijst
+// Gebruikerslijst bijwerken
 socket.on("update users", (users) => {
   const list = document.getElementById("userList");
   list.innerHTML = "";
