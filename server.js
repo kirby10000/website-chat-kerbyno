@@ -30,12 +30,37 @@ io.on("connection", (socket) => {
   socket.on("chat message", ({ tab, text }) => {
     const user = users[socket.id];
     if (user && text.trim()) {
-      io.emit("chat message", {
-        tab,
-        user: user.name,
-        text,
-        color: user.color
-      });
+      // Controleer of het een privéchat of groepschat is
+      const isPrivate = Object.values(users).some(u => u.name === tab);
+      if (isPrivate) {
+        // Vind de socket van de ontvanger
+        const target = Object.entries(users).find(([sid, u]) => u.name === tab);
+        if (target) {
+          const [targetSocketId] = target;
+          // Stuur naar de ontvanger
+          io.to(targetSocketId).emit("chat message", {
+            tab: user.name, // bij de ontvanger komt het in het tabblad van de afzender
+            user: user.name,
+            text,
+            color: user.color
+          });
+          // Stuur ook naar jezelf, zodat het in je eigen chat blijft staan
+          socket.emit("chat message", {
+            tab: tab, // bij jezelf komt het in het tabblad van de ontvanger
+            user: user.name,
+            text,
+            color: user.color
+          });
+        }
+      } else {
+        // Groepschat
+        io.to(tab).emit("chat message", {
+          tab,
+          user: user.name,
+          text,
+          color: user.color
+        });
+      }
     }
   });
 
