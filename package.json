@@ -1,12 +1,18 @@
 {
-  "name": "snapchat-chat-app",
+  "name": "minimal-chat-app",
   "version": "1.0.0",
+  "description": "Een minimalistische chatapplicatie met rooms en privéchats",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
+  "author": "Niels",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+    "socket.io": "^4.7.1"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }
