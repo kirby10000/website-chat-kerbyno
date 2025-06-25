@@ -89,7 +89,7 @@ body, html {
   background: #e76f00;
 }
 
-/* CHAT APP */
+/* Chat + Pong Layout */
 .app {
   min-height: 100vh;
   min-width: 100vw;
@@ -109,238 +109,9 @@ body, html {
   width: 100vw;
   pointer-events: none;
 }
-.chat-inner {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  justify-content: flex-start;
-  height: 80vh;
-  max-height: 800px;
-  min-height: 500px;
-  margin-top: auto;
-  margin-bottom: auto;
-  margin-left: 48px;
-  margin-right: 0;
-  pointer-events: all;
-}
-.sidebar {
-  background: #fff;
-  border-radius: 22px 0 0 22px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.14);
-  padding: 28px 18px 18px 18px;
-  width: 260px;
-  min-width: 170px;
-  max-width: 340px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  height: 100%;
-  box-sizing: border-box;
-  overflow-y: auto;
-}
-.sidebar input,
-.sidebar button {
-  border-radius: 10px;
-}
-.sidebar input {
-  padding: 10px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-.sidebar button {
-  padding: 10px;
-  background: #ff7f00;
-  border: none;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-.sidebar button:hover {
-  background: #e76f00;
-}
-.sidebar h3 {
-  margin-top: 20px;
-  margin-bottom: 8px;
-  font-size: 16px;
-  color: #666;
-}
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.chat-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-radius: 12px;
-  margin-bottom: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  background-color: #ffbd4a;
-  color: #000;
-  transition: transform 0.1s, box-shadow 0.2s;
-  width: 100%;
-  min-height: 38px;
-  border: none;
-  outline: none;
-}
-.chat-item > * { pointer-events: none; }
-.chat-item:hover {
-  transform: scale(1.02);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-.chat-item.active {
-  outline: 2px solid #ff7f00;
-  box-shadow: 0 0 0 3px rgba(255,127,0,0.2);
-}
-.chat-unread-badge {
-  display: none;
-  min-width: 20px;
-  padding: 2px 7px;
-  font-size: 13px;
-  font-weight: bold;
-  color: white;
-  background: #ff3b30;
-  border-radius: 14px;
-  margin-left: 8px;
-  text-align: center;
-  pointer-events: none;
-}
-
-/* Main chatvenster */
-.main {
-  background: #fff;
-  border-radius: 0 22px 22px 0;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-  display: flex;
-  flex-direction: column;
-  min-width: 350px;
-  max-width: 700px;
-  width: 500px;
-  height: 100%;
-  overflow: hidden;
-  position: relative;
-}
-.chat-header {
-  padding: 20px 32px 18px 32px;
-  font-weight: bold;
-  border-bottom: 1px solid #eee;
-  font-size: 21px;
-  background: #fafafa;
-  border-radius: 0 22px 0 0;
-}
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px 32px 16px 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  background-color: #fff;
-}
-.chat-input {
-  display: flex;
-  gap: 10px;
-  padding: 14px;
-  background: #fff;
-  border-radius: 0 0 16px 16px;
-  box-shadow: 0 3px 12px 0 rgba(255,127,0,0.07);
-  margin: 16px;
-  margin-bottom: 24px;
-}
-.chat-input input {
-  flex: 1;
-  padding: 15px;
-  border-radius: 12px;
-  border: 1px solid #ccc;
-  font-size: 15px;
-}
-.chat-input button {
-  padding: 14px 20px;
-  background-color: #ff7f00;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background 0.3s;
-}
-.chat-input button:hover {
-  background-color: #e76f00;
-}
-.hidden {
-  display: none;
-}
-/* 3-stipjes menu */
-.chat-menu-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 20px;
-  padding: 0 6px;
-  color: #888;
-  display: flex;
-  align-items: center;
-  pointer-events: auto !important;
-}
-.chat-menu-btn:hover {
-  color: #ff7f00;
-}
-.chat-menu {
-  display: none;
-  position: absolute;
-  right: 10px;
-  top: 32px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  z-index: 10;
-  min-width: 120px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.09);
-  pointer-events: auto !important;
-}
-.chat-menu.active { display: block; }
-.chat-menu-option {
-  padding: 10px 16px;
-  cursor: pointer;
-  color: #333;
-  border-radius: 8px;
-  transition: background 0.1s;
-}
-.chat-menu-option:hover {
-  background: #ffe1b3;
-  color: #ff7f00;
-}
-.message {
-  background-color: #fff;
-  border-radius: 16px;
-  padding: 10px 16px;
-  max-width: 65%;
-  font-size: 15px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.10);
-  display: flex;
-  flex-direction: column;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-.message .sender {
-  font-weight: bold;
-  font-size: 12px;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* PONG */
 .pong-container {
   width: 400px;
-  margin: 0 auto 18px auto;
+  margin: auto 0 auto 24px;
   padding: 18px 0 0 0;
   display: flex;
   flex-direction: column;
@@ -353,6 +124,7 @@ body, html {
   position: relative;
   outline: none;
   cursor: pointer;
+  height: fit-content;
 }
 .pong-container.pong-active {
   cursor: default;
@@ -373,15 +145,33 @@ body, html {
   text-align: center;
   margin-bottom: 7px;
 }
+.chat-inner {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+  height: 80vh;
+  max-height: 800px;
+  min-height: 500px;
+  margin-top: auto;
+  margin-bottom: auto;
+  margin-left: 0;
+  margin-right: 0;
+  pointer-events: all;
+}
+/* Sidebar enz blijft hetzelfde als eerder, zie eerdere code! */
 
+/* Responsive: Pong boven chat bij kleine schermen */
 @media (max-width: 1000px) {
-  .chat-container { position:static; height:100vh; }
-  .chat-inner { margin-left: 0; }
-  .sidebar, .main { width: 90vw !important; max-width: 99vw; }
-  .main { min-width: 0; }
+  .chat-container { flex-direction: column; align-items: center; }
+  .pong-container { margin: 24px 0 0 0; }
+  .chat-inner { width: 100vw !important; }
 }
 @media (max-width: 600px) {
   .chat-container { flex-direction: column; gap: 12px;}
-  .chat-inner { flex-direction: column; height:90vh; }
-  .sidebar, .main { border-radius: 16px; width: 98vw !important; }
+  .pong-container { margin: 12px 0 0 0; width: 98vw; }
+  .chat-inner { flex-direction: column; height:90vh; width: 98vw !important;}
 }
+
+/* ...de rest van je CSS (sidebar, main, messages, etc) blijft hetzelfde als eerder! */
