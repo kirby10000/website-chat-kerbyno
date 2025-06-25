@@ -1,6 +1,3 @@
-// =====================
-// SERVER MET CHAT & PONG
-// =====================
 const express = require('express');
 const app = express();
 const http = require('http');
@@ -14,7 +11,6 @@ const userRooms = {};
 app.use(express.static('public'));
 
 io.on('connection', (socket) => {
-  // -- Chat registratie --
   socket.on('register', (name) => {
     users[socket.id] = { name };
     io.emit('all users', Object.values(users));
@@ -52,6 +48,7 @@ io.on('connection', (socket) => {
       if (userRooms[room].length === 0) delete userRooms[room];
     });
     io.emit('all users', Object.values(users));
+
     // PONG disconnect
     Object.keys(pongRooms).forEach(room => {
       let g = pongRooms[room];
