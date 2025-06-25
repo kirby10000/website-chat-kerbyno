@@ -261,6 +261,22 @@ let pongReady = false;
 let pongRoom = null;
 let pongYouInvited = false;
 
+// Pas canvas mee aan formaat parent
+function resizePongCanvas() {
+  // Houd verhouding 400:250 (16:10)
+  const parent = pongContainer;
+  if (!parent) return;
+  let width = parent.offsetWidth * 0.9;
+  let height = parent.offsetHeight * 0.7;
+  // Limiet op max/min
+  width = Math.max(320, Math.min(width, 600));
+  height = Math.max(180, Math.min(height, 400));
+  pongCanvas.width = Math.round(width);
+  pongCanvas.height = Math.round(height);
+  if (pongGame) drawPong();
+}
+window.addEventListener('resize', resizePongCanvas);
+
 // Alleen in privéchat
 function updatePongVisibility() {
   if (typeof usernames === "undefined" || typeof activeTab === "undefined") return;
@@ -269,6 +285,7 @@ function updatePongVisibility() {
     pongChatPartner = activeTab;
     pongRoom = pongGetRoomName();
     pongResetUI();
+    setTimeout(resizePongCanvas, 50);
   } else {
     pongContainer.classList.add('hidden');
     stopPong();
@@ -341,6 +358,7 @@ function pongStart(otherName, youInvite) {
   pongReady = true;
   pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
   pongContainer.classList.add('pong-active');
+  pongContainer.onclick = null;
   if (youInvite) {
     pongRole = 'right';
   } else {
@@ -383,11 +401,22 @@ function stopPong() {
   ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
   pongInfo.textContent = '';
   pongContainer.classList.remove('pong-active');
+  pongContainer.onclick = null;
 }
 
 function drawPong() {
   if (!pongGame) return;
+  resizePongCanvas();
   ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+
+  // Bepaal schalen
+  const w = pongCanvas.width;
+  const h = pongCanvas.height;
+  const scaleX = w / 400;
+  const scaleY = h / 250;
+
+  ctx.save();
+  ctx.scale(scaleX, scaleY);
 
   ctx.beginPath();
   ctx.arc(pongGame.ball.x, pongGame.ball.y, pongGame.ball.radius, 0, 2 * Math.PI);
@@ -396,20 +425,22 @@ function drawPong() {
 
   ctx.fillStyle = "#333";
   ctx.fillRect(10, pongGame.left.y, pongGame.paddleW, pongGame.paddleH);
-  ctx.fillRect(pongCanvas.width-10-pongGame.paddleW, pongGame.right.y, pongGame.paddleW, pongGame.paddleH);
+  ctx.fillRect(400-10-pongGame.paddleW, pongGame.right.y, pongGame.paddleW, pongGame.paddleH);
 
   ctx.font = "bold 28px Segoe UI";
   ctx.fillStyle = "#bbb";
-  ctx.fillText(pongGame.left.score, pongCanvas.width/2-42, 40);
-  ctx.fillText(pongGame.right.score, pongCanvas.width/2+24, 40);
+  ctx.fillText(pongGame.left.score, 400/2-42, 40);
+  ctx.fillText(pongGame.right.score, 400/2+24, 40);
 
   ctx.strokeStyle = "#eee";
   ctx.setLineDash([5, 7]);
   ctx.beginPath();
-  ctx.moveTo(pongCanvas.width/2, 0);
-  ctx.lineTo(pongCanvas.width/2, pongCanvas.height);
+  ctx.moveTo(400/2, 0);
+  ctx.lineTo(400/2, 250);
   ctx.stroke();
   ctx.setLineDash([]);
+
+  ctx.restore();
 }
 
 // Bij tab wissel, reset Pong UI
