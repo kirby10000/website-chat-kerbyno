@@ -18,10 +18,6 @@
   </div>
   <div class="app hidden">
     <div class="chat-container">
-      <div class="pong-container hidden" tabindex="0">
-        <canvas id="pongCanvas"></canvas>
-        <div class="pong-info"></div>
-      </div>
       <div class="chat-inner">
         <div class="sidebar">
           <input id="newRoomInput" type="text" placeholder="Nieuwe groep...">
@@ -39,6 +35,11 @@
             <button id="sendBtn">Verstuur</button>
           </div>
         </div>
+      </div>
+      <!-- PONG STAAT RECHTS! -->
+      <div class="pong-container hidden" tabindex="0">
+        <canvas id="pongCanvas" width="400" height="250"></canvas>
+        <div class="pong-info"></div>
       </div>
     </div>
   </div>
