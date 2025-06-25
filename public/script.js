@@ -1,6 +1,3 @@
-// =====================
-// CHAT & PONG IN ÉÉN
-// =====================
 const socket = io();
 let username = "";
 let activeTab = null;
@@ -24,7 +21,6 @@ const sendBtn = document.getElementById("sendBtn");
 const groupsList = document.getElementById("groupsList");
 const notifSound = document.getElementById("notifSound");
 
-// Audio notificatie
 function playNotification() {
   if (notifSound) {
     notifSound.currentTime = 0;
@@ -32,7 +28,6 @@ function playNotification() {
   }
 }
 
-// Login
 enterChat.onclick = () => {
   const name = usernameInput.value.trim();
   if (!name) return;
@@ -44,7 +39,6 @@ enterChat.onclick = () => {
   socket.emit("get rooms");
 };
 
-// Groep aanmaken/joinen
 createRoomBtn.onclick = () => {
   const room = newRoomInput.value.trim();
   if (!room) return;
@@ -53,12 +47,6 @@ createRoomBtn.onclick = () => {
   newRoomInput.value = "";
 };
 
-socket.on("joined room", (myRooms) => {
-  groups = myRooms.filter(room => !usernames.includes(room) && !deletedChats.has(room));
-  renderGroups();
-});
-
-// Enter om te versturen
 messageInput.addEventListener("keydown", function(e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -66,7 +54,6 @@ messageInput.addEventListener("keydown", function(e) {
   }
 });
 
-// Verzenden knop
 sendBtn.onclick = () => {
   const text = messageInput.value.trim();
   if (!text || !activeTab) return;
@@ -80,7 +67,11 @@ socket.on("all users", (users) => {
   renderUsers();
 });
 
-// Berichten ontvangen + ongelezen badge + melding
+socket.on("joined room", (myRooms) => {
+  groups = myRooms.filter(room => !usernames.includes(room) && !deletedChats.has(room));
+  renderGroups();
+});
+
 socket.on("chat message", (msg) => {
   if (deletedChats.has(msg.tab)) return;
 
@@ -240,11 +231,9 @@ function renderMessages() {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Notificatie toestemming vragen
 if (window.Notification && Notification.permission !== "granted") {
   Notification.requestPermission();
 }
-
 
 // ==================== PONG =========================
 
@@ -254,30 +243,25 @@ const pongInfo = document.querySelector('.pong-info');
 const ctx = pongCanvas.getContext('2d');
 let pongGame = null;
 let pongInterval = null;
-let pongRole = null; // "left" of "right"
+let pongRole = null;
 let pongChatPartner = null;
 let pongWanted = false;
 let pongReady = false;
 let pongRoom = null;
 let pongYouInvited = false;
 
-// Pas canvas mee aan formaat parent
 function resizePongCanvas() {
-  // Houd verhouding 400:250 (16:10)
   const parent = pongContainer;
   if (!parent) return;
-  let width = parent.offsetWidth * 0.9;
-  let height = parent.offsetHeight * 0.7;
-  // Limiet op max/min
+  let width = parent.offsetWidth * 0.95;
+  let height = 250;
   width = Math.max(320, Math.min(width, 600));
-  height = Math.max(180, Math.min(height, 400));
   pongCanvas.width = Math.round(width);
   pongCanvas.height = Math.round(height);
   if (pongGame) drawPong();
 }
 window.addEventListener('resize', resizePongCanvas);
 
-// Alleen in privéchat
 function updatePongVisibility() {
   if (typeof usernames === "undefined" || typeof activeTab === "undefined") return;
   if (activeTab && usernames.includes(activeTab)) {
@@ -285,7 +269,7 @@ function updatePongVisibility() {
     pongChatPartner = activeTab;
     pongRoom = pongGetRoomName();
     pongResetUI();
-    setTimeout(resizePongCanvas, 50);
+    setTimeout(() => { resizePongCanvas(); drawPong(); }, 50);
   } else {
     pongContainer.classList.add('hidden');
     stopPong();
@@ -294,7 +278,6 @@ function updatePongVisibility() {
   }
 }
 
-// Unieke room
 function pongGetRoomName() {
   if (!username || !pongChatPartner) return null;
   let ids = [username, pongChatPartner].sort();
@@ -321,7 +304,6 @@ pongContainer.addEventListener('click', function() {
     pongInfo.textContent = 'Wachten op tegenstander...';
     pongContainer.classList.add('pong-active');
     socket.emit('pong request', pongRoom, pongChatPartner);
-    // Stuur chatbericht met uitnodiging
     socket.emit('chat message', { tab: pongChatPartner, text: `${username} wil Pong spelen! Klik op het Pong-venster om te starten.` });
   }
 });
@@ -409,7 +391,6 @@ function drawPong() {
   resizePongCanvas();
   ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
 
-  // Bepaal schalen
   const w = pongCanvas.width;
   const h = pongCanvas.height;
   const scaleX = w / 400;
@@ -443,7 +424,6 @@ function drawPong() {
   ctx.restore();
 }
 
-// Bij tab wissel, reset Pong UI
 const origSwitchTab = switchTab;
 switchTab = function(tab) {
   origSwitchTab(tab);
