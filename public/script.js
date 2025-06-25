@@ -1,3 +1,6 @@
+// =====================
+// CHAT & PONG IN ÉÉN
+// =====================
 const socket = io();
 let username = "";
 let activeTab = null;
@@ -19,13 +22,13 @@ const messagesDiv = document.getElementById("messages");
 const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const groupsList = document.getElementById("groupsList");
+const notifSound = document.getElementById("notifSound");
 
 // Audio notificatie
 function playNotification() {
-  const audio = document.getElementById("notifSound");
-  if (audio) {
-    audio.currentTime = 0;
-    audio.play();
+  if (notifSound) {
+    notifSound.currentTime = 0;
+    notifSound.play();
   }
 }
 
@@ -50,13 +53,12 @@ createRoomBtn.onclick = () => {
   newRoomInput.value = "";
 };
 
-// Alleen JOUW groepen ontvangen
 socket.on("joined room", (myRooms) => {
   groups = myRooms.filter(room => !usernames.includes(room) && !deletedChats.has(room));
   renderGroups();
 });
 
-// Enter om te versturen (Shift+Enter ondersteunt geen nieuwe regels)
+// Enter om te versturen
 messageInput.addEventListener("keydown", function(e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -73,7 +75,6 @@ sendBtn.onclick = () => {
   messageInput.value = "";
 };
 
-// Gebruikerslijst en usernames bijwerken
 socket.on("all users", (users) => {
   usernames = users.map(u => u.name);
   renderUsers();
@@ -102,7 +103,6 @@ socket.on("chat message", (msg) => {
   }
 });
 
-// Chat-tab wisselen
 function switchTab(tab) {
   if (deletedChats.has(tab)) return;
   activeTab = tab;
@@ -112,9 +112,9 @@ function switchTab(tab) {
   renderGroups();
   renderUsers();
   deletedChats.delete(tab);
+  updatePongVisibility();
 }
 
-// Chat-item (gebruikt voor zowel gebruikers als groepen)
 function createChatItem(name, isGroup = false) {
   if (deletedChats.has(name)) return document.createComment("verwijderde chat");
 
@@ -122,9 +122,7 @@ function createChatItem(name, isGroup = false) {
   li.classList.add("chat-item");
   if (name === activeTab) li.classList.add("active");
 
-  // Maak de hele li klikbaar
   li.onclick = (e) => {
-    // Klik op de 3-stipjes of menu? Negeer.
     if (
       e.target.closest(".chat-menu-btn") ||
       e.target.closest(".chat-menu") ||
@@ -142,13 +140,11 @@ function createChatItem(name, isGroup = false) {
     closeAllMenus();
   };
 
-  // Naam (links)
   const span = document.createElement("span");
   span.textContent = name;
   span.style.flex = "1";
   span.style.userSelect = "none";
 
-  // Ongelezen badge (rechts van naam)
   const badge = document.createElement("span");
   badge.className = "chat-unread-badge";
   if (unreadCounts[name] > 0) {
@@ -158,7 +154,6 @@ function createChatItem(name, isGroup = false) {
     badge.style.display = 'none';
   }
 
-  // 3-stipjes knop (rechts)
   const menuBtn = document.createElement("button");
   menuBtn.className = "chat-menu-btn";
   menuBtn.innerHTML = "&#8942;";
@@ -168,7 +163,6 @@ function createChatItem(name, isGroup = false) {
     chatMenu.classList.toggle("active");
   };
 
-  // Opties-menu
   const chatMenu = document.createElement("div");
   chatMenu.className = "chat-menu";
   const removeOption = document.createElement("div");
@@ -207,7 +201,6 @@ function closeAllMenus() {
   document.querySelectorAll(".chat-menu.active").forEach(menu => menu.classList.remove("active"));
 }
 
-// Groepen tonen
 function renderGroups() {
   groupsList.innerHTML = "";
   groups.forEach(room => {
@@ -216,7 +209,6 @@ function renderGroups() {
   });
 }
 
-// Gebruikers tonen (met badge)
 function renderUsers() {
   allUsersList.innerHTML = "";
   usernames.forEach(name => {
@@ -226,7 +218,6 @@ function renderUsers() {
   });
 }
 
-// Berichten tonen
 function renderMessages() {
   messagesDiv.innerHTML = "";
   if (!tabs[activeTab]) return;
@@ -249,7 +240,184 @@ function renderMessages() {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Vraag bij starten om notificatie rechten
+// Notificatie toestemming vragen
 if (window.Notification && Notification.permission !== "granted") {
   Notification.requestPermission();
+}
+
+
+// ==================== PONG =========================
+
+const pongContainer = document.querySelector('.pong-container');
+const pongCanvas = document.getElementById('pongCanvas');
+const pongInfo = document.querySelector('.pong-info');
+const ctx = pongCanvas.getContext('2d');
+let pongGame = null;
+let pongInterval = null;
+let pongRole = null; // "left" of "right"
+let pongChatPartner = null;
+let pongWanted = false;
+let pongReady = false;
+let pongRoom = null;
+let pongYouInvited = false;
+
+// Alleen in privéchat
+function updatePongVisibility() {
+  if (typeof usernames === "undefined" || typeof activeTab === "undefined") return;
+  if (activeTab && usernames.includes(activeTab)) {
+    pongContainer.classList.remove('hidden');
+    pongChatPartner = activeTab;
+    pongRoom = pongGetRoomName();
+    pongResetUI();
+  } else {
+    pongContainer.classList.add('hidden');
+    stopPong();
+    pongChatPartner = null;
+    pongRoom = null;
+  }
+}
+
+// Unieke room
+function pongGetRoomName() {
+  if (!username || !pongChatPartner) return null;
+  let ids = [username, pongChatPartner].sort();
+  return 'pong_' + ids[0] + '_' + ids[1];
+}
+
+function pongResetUI() {
+  pongWanted = false;
+  pongReady = false;
+  pongYouInvited = false;
+  pongGame = null;
+  pongRole = null;
+  pongInfo.textContent = 'Klik om Pong te starten';
+  pongContainer.classList.remove('pong-active');
+  ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+}
+
+pongContainer.addEventListener('click', function() {
+  if (!pongChatPartner) return;
+  if (pongReady) return;
+  if (!pongWanted) {
+    pongWanted = true;
+    pongYouInvited = true;
+    pongInfo.textContent = 'Wachten op tegenstander...';
+    pongContainer.classList.add('pong-active');
+    socket.emit('pong request', pongRoom, pongChatPartner);
+    // Stuur chatbericht met uitnodiging
+    socket.emit('chat message', { tab: pongChatPartner, text: `${username} wil Pong spelen! Klik op het Pong-venster om te starten.` });
+  }
+});
+
+socket.on('pong request', (room, partner) => {
+  if (pongRoom !== room) return;
+  if (pongWanted) {
+    pongStart(partner, false);
+    socket.emit('pong accept', room, partner);
+  } else {
+    pongInfo.textContent = `${partner} wil Pong spelen! Klik om te starten.`;
+    pongContainer.classList.add('pong-active');
+    pongYouInvited = false;
+    pongContainer.onclick = function() {
+      if (!pongReady) {
+        pongWanted = true;
+        pongContainer.classList.add('pong-active');
+        pongInfo.textContent = 'Wachten op tegenstander...';
+        pongStart(partner, false);
+        socket.emit('pong accept', room, partner);
+      }
+    };
+  }
+});
+
+socket.on('pong accept', (room, partner) => {
+  if (pongRoom !== room) return;
+  if (pongWanted && !pongReady) {
+    pongStart(partner, true);
+  }
+});
+
+function pongStart(otherName, youInvite) {
+  pongReady = true;
+  pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
+  pongContainer.classList.add('pong-active');
+  if (youInvite) {
+    pongRole = 'right';
+  } else {
+    pongRole = 'left';
+  }
+  socket.emit('pong join', pongRoom, pongRole);
+  if (!pongInterval) pongInterval = setInterval(() => {
+    if (pongGame) drawPong();
+  }, 1000/60);
+}
+
+socket.on('pong state', (room, state) => {
+  if (pongRoom === room) {
+    pongGame = state;
+    drawPong();
+  }
+});
+socket.on('pong role', (role) => {
+  pongRole = role;
+});
+socket.on('pong start', () => {
+  pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
+});
+
+document.addEventListener('keydown', function(e){
+  if (!pongGame || !pongRole || !pongReady) return;
+  if (document.activeElement !== pongContainer && document.activeElement !== document.body) return;
+  if (e.key === "ArrowUp") socket.emit('pong move', pongRoom, pongRole, -1);
+  if (e.key === "ArrowDown") socket.emit('pong move', pongRoom, pongRole, +1);
+});
+
+function stopPong() {
+  if (pongInterval) clearInterval(pongInterval);
+  pongInterval = null;
+  pongGame = null;
+  pongRole = null;
+  pongReady = false;
+  pongWanted = false;
+  pongYouInvited = false;
+  ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+  pongInfo.textContent = '';
+  pongContainer.classList.remove('pong-active');
+}
+
+function drawPong() {
+  if (!pongGame) return;
+  ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+
+  ctx.beginPath();
+  ctx.arc(pongGame.ball.x, pongGame.ball.y, pongGame.ball.radius, 0, 2 * Math.PI);
+  ctx.fillStyle = "#ff7f00";
+  ctx.fill();
+
+  ctx.fillStyle = "#333";
+  ctx.fillRect(10, pongGame.left.y, pongGame.paddleW, pongGame.paddleH);
+  ctx.fillRect(pongCanvas.width-10-pongGame.paddleW, pongGame.right.y, pongGame.paddleW, pongGame.paddleH);
+
+  ctx.font = "bold 28px Segoe UI";
+  ctx.fillStyle = "#bbb";
+  ctx.fillText(pongGame.left.score, pongCanvas.width/2-42, 40);
+  ctx.fillText(pongGame.right.score, pongCanvas.width/2+24, 40);
+
+  ctx.strokeStyle = "#eee";
+  ctx.setLineDash([5, 7]);
+  ctx.beginPath();
+  ctx.moveTo(pongCanvas.width/2, 0);
+  ctx.lineTo(pongCanvas.width/2, pongCanvas.height);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// Bij tab wissel, reset Pong UI
+const origSwitchTab = switchTab;
+switchTab = function(tab) {
+  origSwitchTab(tab);
+  updatePongVisibility();
+};
+if (typeof app !== "undefined" && app) {
+  updatePongVisibility();
 }
