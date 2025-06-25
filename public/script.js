@@ -1,156 +1,423 @@
 // =====================
-// SERVER MET CHAT & PONG
+// CHAT & PONG IN ÉÉN
 // =====================
-const express = require('express');
-const app = express();
-const http = require('http');
-const server = http.createServer(app);
-const { Server } = require('socket.io');
-const io = new Server(server);
+const socket = io();
+let username = "";
+let activeTab = null;
+const tabs = {};
+let groups = [];
+let usernames = [];
+const unreadCounts = {};
+const deletedChats = new Set();
 
-const users = {};
-const userRooms = {};
+const loginScreen = document.getElementById("loginScreen");
+const enterChat = document.getElementById("enterChat");
+const usernameInput = document.getElementById("usernameInput");
+const app = document.querySelector(".app");
+const allUsersList = document.getElementById("allUsersList");
+const newRoomInput = document.getElementById("newRoomInput");
+const createRoomBtn = document.getElementById("createRoom");
+const chatHeader = document.getElementById("chatHeader");
+const messagesDiv = document.getElementById("messages");
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const groupsList = document.getElementById("groupsList");
+const notifSound = document.getElementById("notifSound");
 
-app.use(express.static('public'));
-
-io.on('connection', (socket) => {
-  // -- Chat registratie --
-  socket.on('register', (name) => {
-    users[socket.id] = { name };
-    io.emit('all users', Object.values(users));
-  });
-
-  socket.on('get users', () => {
-    socket.emit('all users', Object.values(users));
-  });
-
-  socket.on('get rooms', () => {
-    const rooms = Object.keys(userRooms);
-    socket.emit('joined room', rooms);
-  });
-
-  socket.on('join room', (room) => {
-    socket.join(room);
-    userRooms[room] = userRooms[room] || [];
-    if (!userRooms[room].includes(socket.id)) userRooms[room].push(socket.id);
-    socket.emit('joined room', Object.keys(userRooms));
-  });
-
-  socket.on('chat message', (msg) => {
-    if (!users[socket.id]) return;
-    let tab = msg.tab;
-    let user = users[socket.id].name;
-    let color = "#ff7f00";
-    let text = msg.text;
-    io.emit('chat message', { user, text, tab, color });
-  });
-
-  socket.on('disconnect', () => {
-    if (users[socket.id]) delete users[socket.id];
-    Object.keys(userRooms).forEach(room => {
-      userRooms[room] = userRooms[room].filter(id => id !== socket.id);
-      if (userRooms[room].length === 0) delete userRooms[room];
-    });
-    io.emit('all users', Object.values(users));
-    // PONG disconnect
-    Object.keys(pongRooms).forEach(room => {
-      let g = pongRooms[room];
-      for (const r of ['left','right']) {
-        if (g.players[r] === socket.id) g.players[r] = null;
-      }
-      if ((!g.players.left && !g.players.right) && g.interval) {
-        clearInterval(g.interval);
-        delete pongRooms[room];
-      }
-    });
-  });
-
-  // ========== PONG ==========
-  socket.on('pong request', (room, partnerName) => {
-    let targetId = Object.entries(users).find(([sid, u]) => u.name === partnerName)?.[0];
-    if (targetId) {
-      io.to(targetId).emit('pong request', room, users[socket.id].name);
-    }
-  });
-  socket.on('pong accept', (room, partnerName) => {
-    let targetId = Object.entries(users).find(([sid, u]) => u.name === partnerName)?.[0];
-    if (targetId) {
-      io.to(targetId).emit('pong accept', room, users[socket.id].name);
-    }
-  });
-
-  socket.on('pong join', (room, role) => {
-    socket.join(room);
-    if (!pongRooms[room]) {
-      pongRooms[room] = {
-        room,
-        left: { y: 90, score: 0 },
-        right: { y: 90, score: 0 },
-        ball: { x: 200, y: 125, vx: 3, vy: 2, radius: 9 },
-        paddleH: 60,
-        paddleW: 10,
-        width: 400,
-        height: 250,
-        running: true,
-        players: {},
-        lastUpdate: Date.now()
-      };
-    }
-    pongRooms[room].players[role] = socket.id;
-    socket.emit('pong role', role);
-
-    if (!pongRooms[room].interval) {
-      pongRooms[room].interval = setInterval(() => updatePongRoom(room), 1000/60);
-    }
-    io.to(room).emit('pong start');
-  });
-
-  socket.on('pong move', (room, role, dir) => {
-    let g = pongRooms[room];
-    if (!g) return;
-    let speed = 5;
-    if (role === "left") g.left.y = Math.max(0, Math.min(g.height - g.paddleH, g.left.y + dir*speed));
-    if (role === "right") g.right.y = Math.max(0, Math.min(g.height - g.paddleH, g.right.y + dir*speed));
-  });
-});
-
-const pongRooms = {};
-function updatePongRoom(room) {
-  let g = pongRooms[room];
-  if (!g || !g.running) return;
-  g.ball.x += g.ball.vx;
-  g.ball.y += g.ball.vy;
-  if (g.ball.y < g.ball.radius || g.ball.y > g.height - g.ball.radius) g.ball.vy *= -1;
-  if (
-    g.ball.x - g.ball.radius < 10 + g.paddleW &&
-    g.ball.y > g.left.y &&
-    g.ball.y < g.left.y + g.paddleH
-  ) {
-    g.ball.vx = Math.abs(g.ball.vx);
+// Audio notificatie
+function playNotification() {
+  if (notifSound) {
+    notifSound.currentTime = 0;
+    notifSound.play();
   }
-  if (
-    g.ball.x + g.ball.radius > g.width-10-g.paddleW &&
-    g.ball.y > g.right.y &&
-    g.ball.y < g.right.y + g.paddleH
-  ) {
-    g.ball.vx = -Math.abs(g.ball.vx);
-  }
-  if (g.ball.x < 0) {
-    g.right.score++; resetPongBall(g, -1);
-  }
-  if (g.ball.x > g.width) {
-    g.left.score++; resetPongBall(g, +1);
-  }
-  io.to(room).emit('pong state', room, g);
-}
-function resetPongBall(g, dir) {
-  g.ball.x = g.width/2;
-  g.ball.y = g.height/2;
-  g.ball.vx = (dir || (Math.random()<0.5?-1:1)) * (2.3 + Math.random()*2.2);
-  g.ball.vy = (Math.random()<0.5?-1:1) * (2.0 + Math.random()*2.5);
 }
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server gestart op http://localhost:${PORT}`);
+// Login
+enterChat.onclick = () => {
+  const name = usernameInput.value.trim();
+  if (!name) return;
+  username = name;
+  loginScreen.classList.add("hidden");
+  app.classList.remove("hidden");
+  socket.emit("register", name);
+  socket.emit("get users");
+  socket.emit("get rooms");
+};
+
+// Groep aanmaken/joinen
+createRoomBtn.onclick = () => {
+  const room = newRoomInput.value.trim();
+  if (!room) return;
+  deletedChats.delete(room);
+  socket.emit("join room", room);
+  newRoomInput.value = "";
+};
+
+socket.on("joined room", (myRooms) => {
+  groups = myRooms.filter(room => !usernames.includes(room) && !deletedChats.has(room));
+  renderGroups();
 });
+
+// Enter om te versturen
+messageInput.addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendBtn.click();
+  }
+});
+
+// Verzenden knop
+sendBtn.onclick = () => {
+  const text = messageInput.value.trim();
+  if (!text || !activeTab) return;
+  if (deletedChats.has(activeTab)) return;
+  socket.emit("chat message", { tab: activeTab, text });
+  messageInput.value = "";
+};
+
+socket.on("all users", (users) => {
+  usernames = users.map(u => u.name);
+  renderUsers();
+});
+
+// Berichten ontvangen + ongelezen badge + melding
+socket.on("chat message", (msg) => {
+  if (deletedChats.has(msg.tab)) return;
+
+  if (!tabs[msg.tab]) tabs[msg.tab] = [];
+  tabs[msg.tab].push(msg);
+
+  if (msg.tab === activeTab) {
+    renderMessages();
+    unreadCounts[msg.tab] = 0;
+  } else {
+    unreadCounts[msg.tab] = (unreadCounts[msg.tab] || 0) + 1;
+    renderGroups();
+    renderUsers();
+    playNotification();
+    if (window.Notification && Notification.permission === "granted") {
+      new Notification("Nieuw bericht in " + msg.tab, { body: msg.text });
+    } else if (window.Notification && Notification.permission !== "denied") {
+      Notification.requestPermission();
+    }
+  }
+});
+
+function switchTab(tab) {
+  if (deletedChats.has(tab)) return;
+  activeTab = tab;
+  chatHeader.textContent = tab;
+  unreadCounts[tab] = 0;
+  renderMessages();
+  renderGroups();
+  renderUsers();
+  deletedChats.delete(tab);
+  updatePongVisibility();
+}
+
+function createChatItem(name, isGroup = false) {
+  if (deletedChats.has(name)) return document.createComment("verwijderde chat");
+
+  const li = document.createElement("li");
+  li.classList.add("chat-item");
+  if (name === activeTab) li.classList.add("active");
+
+  li.onclick = (e) => {
+    if (
+      e.target.closest(".chat-menu-btn") ||
+      e.target.closest(".chat-menu") ||
+      e.target.classList.contains("chat-menu-option")
+    ) {
+      return;
+    }
+    if (deletedChats.has(name)) return;
+    if (!tabs[name]) tabs[name] = [];
+    switchTab(name);
+    if (isGroup) {
+      deletedChats.delete(name);
+      socket.emit("join room", name);
+    }
+    closeAllMenus();
+  };
+
+  const span = document.createElement("span");
+  span.textContent = name;
+  span.style.flex = "1";
+  span.style.userSelect = "none";
+
+  const badge = document.createElement("span");
+  badge.className = "chat-unread-badge";
+  if (unreadCounts[name] > 0) {
+    badge.textContent = unreadCounts[name];
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  const menuBtn = document.createElement("button");
+  menuBtn.className = "chat-menu-btn";
+  menuBtn.innerHTML = "&#8942;";
+  menuBtn.onclick = function(e) {
+    e.stopPropagation();
+    closeAllMenus();
+    chatMenu.classList.toggle("active");
+  };
+
+  const chatMenu = document.createElement("div");
+  chatMenu.className = "chat-menu";
+  const removeOption = document.createElement("div");
+  removeOption.className = "chat-menu-option";
+  removeOption.textContent = "Chat verwijderen";
+  removeOption.onclick = function(e) {
+    e.stopPropagation();
+    deletedChats.add(name);
+    if (isGroup) {
+      groups = groups.filter(g => g !== name);
+      renderGroups();
+    }
+    delete tabs[name];
+    delete unreadCounts[name];
+    if (activeTab === name) {
+      activeTab = null;
+      chatHeader.textContent = "Geen chat geselecteerd";
+      messagesDiv.innerHTML = "";
+    }
+    renderGroups();
+    renderUsers();
+    closeAllMenus();
+  };
+  chatMenu.appendChild(removeOption);
+
+  li.appendChild(span);
+  li.appendChild(badge);
+  li.appendChild(menuBtn);
+  li.appendChild(chatMenu);
+
+  li.addEventListener("mouseleave", closeAllMenus);
+  return li;
+}
+
+function closeAllMenus() {
+  document.querySelectorAll(".chat-menu.active").forEach(menu => menu.classList.remove("active"));
+}
+
+function renderGroups() {
+  groupsList.innerHTML = "";
+  groups.forEach(room => {
+    const groupItem = createChatItem(room, true);
+    if (groupItem) groupsList.appendChild(groupItem);
+  });
+}
+
+function renderUsers() {
+  allUsersList.innerHTML = "";
+  usernames.forEach(name => {
+    if (name === username) return;
+    const userItem = createChatItem(name, false);
+    if (userItem) allUsersList.appendChild(userItem);
+  });
+}
+
+function renderMessages() {
+  messagesDiv.innerHTML = "";
+  if (!tabs[activeTab]) return;
+  tabs[activeTab].forEach(msg => {
+    const div = document.createElement("div");
+    div.classList.add("message");
+
+    const sender = document.createElement("div");
+    sender.classList.add("sender");
+    sender.textContent = msg.user;
+    sender.style.color = msg.color || "#ff7f00";
+
+    const content = document.createElement("div");
+    content.textContent = msg.text;
+
+    div.appendChild(sender);
+    div.appendChild(content);
+    messagesDiv.appendChild(div);
+  });
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// Notificatie toestemming vragen
+if (window.Notification && Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+
+
+// ==================== PONG =========================
+
+const pongContainer = document.querySelector('.pong-container');
+const pongCanvas = document.getElementById('pongCanvas');
+const pongInfo = document.querySelector('.pong-info');
+const ctx = pongCanvas.getContext('2d');
+let pongGame = null;
+let pongInterval = null;
+let pongRole = null; // "left" of "right"
+let pongChatPartner = null;
+let pongWanted = false;
+let pongReady = false;
+let pongRoom = null;
+let pongYouInvited = false;
+
+// Alleen in privéchat
+function updatePongVisibility() {
+  if (typeof usernames === "undefined" || typeof activeTab === "undefined") return;
+  if (activeTab && usernames.includes(activeTab)) {
+    pongContainer.classList.remove('hidden');
+    pongChatPartner = activeTab;
+    pongRoom = pongGetRoomName();
+    pongResetUI();
+  } else {
+    pongContainer.classList.add('hidden');
+    stopPong();
+    pongChatPartner = null;
+    pongRoom = null;
+  }
+}
+
+// Unieke room
+function pongGetRoomName() {
+  if (!username || !pongChatPartner) return null;
+  let ids = [username, pongChatPartner].sort();
+  return 'pong_' + ids[0] + '_' + ids[1];
+}
+
+function pongResetUI() {
+  pongWanted = false;
+  pongReady = false;
+  pongYouInvited = false;
+  pongGame = null;
+  pongRole = null;
+  pongInfo.textContent = 'Klik om Pong te starten';
+  pongContainer.classList.remove('pong-active');
+  ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+}
+
+pongContainer.addEventListener('click', function() {
+  if (!pongChatPartner) return;
+  if (pongReady) return;
+  if (!pongWanted) {
+    pongWanted = true;
+    pongYouInvited = true;
+    pongInfo.textContent = 'Wachten op tegenstander...';
+    pongContainer.classList.add('pong-active');
+    socket.emit('pong request', pongRoom, pongChatPartner);
+    // Stuur chatbericht met uitnodiging
+    socket.emit('chat message', { tab: pongChatPartner, text: `${username} wil Pong spelen! Klik op het Pong-venster om te starten.` });
+  }
+});
+
+socket.on('pong request', (room, partner) => {
+  if (pongRoom !== room) return;
+  if (pongWanted) {
+    pongStart(partner, false);
+    socket.emit('pong accept', room, partner);
+  } else {
+    pongInfo.textContent = `${partner} wil Pong spelen! Klik om te starten.`;
+    pongContainer.classList.add('pong-active');
+    pongYouInvited = false;
+    pongContainer.onclick = function() {
+      if (!pongReady) {
+        pongWanted = true;
+        pongContainer.classList.add('pong-active');
+        pongInfo.textContent = 'Wachten op tegenstander...';
+        pongStart(partner, false);
+        socket.emit('pong accept', room, partner);
+      }
+    };
+  }
+});
+
+socket.on('pong accept', (room, partner) => {
+  if (pongRoom !== room) return;
+  if (pongWanted && !pongReady) {
+    pongStart(partner, true);
+  }
+});
+
+function pongStart(otherName, youInvite) {
+  pongReady = true;
+  pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
+  pongContainer.classList.add('pong-active');
+  if (youInvite) {
+    pongRole = 'right';
+  } else {
+    pongRole = 'left';
+  }
+  socket.emit('pong join', pongRoom, pongRole);
+  if (!pongInterval) pongInterval = setInterval(() => {
+    if (pongGame) drawPong();
+  }, 1000/60);
+}
+
+socket.on('pong state', (room, state) => {
+  if (pongRoom === room) {
+    pongGame = state;
+    drawPong();
+  }
+});
+socket.on('pong role', (role) => {
+  pongRole = role;
+});
+socket.on('pong start', () => {
+  pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
+});
+
+document.addEventListener('keydown', function(e){
+  if (!pongGame || !pongRole || !pongReady) return;
+  if (document.activeElement !== pongContainer && document.activeElement !== document.body) return;
+  if (e.key === "ArrowUp") socket.emit('pong move', pongRoom, pongRole, -1);
+  if (e.key === "ArrowDown") socket.emit('pong move', pongRoom, pongRole, +1);
+});
+
+function stopPong() {
+  if (pongInterval) clearInterval(pongInterval);
+  pongInterval = null;
+  pongGame = null;
+  pongRole = null;
+  pongReady = false;
+  pongWanted = false;
+  pongYouInvited = false;
+  ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+  pongInfo.textContent = '';
+  pongContainer.classList.remove('pong-active');
+}
+
+function drawPong() {
+  if (!pongGame) return;
+  ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+
+  ctx.beginPath();
+  ctx.arc(pongGame.ball.x, pongGame.ball.y, pongGame.ball.radius, 0, 2 * Math.PI);
+  ctx.fillStyle = "#ff7f00";
+  ctx.fill();
+
+  ctx.fillStyle = "#333";
+  ctx.fillRect(10, pongGame.left.y, pongGame.paddleW, pongGame.paddleH);
+  ctx.fillRect(pongCanvas.width-10-pongGame.paddleW, pongGame.right.y, pongGame.paddleW, pongGame.paddleH);
+
+  ctx.font = "bold 28px Segoe UI";
+  ctx.fillStyle = "#bbb";
+  ctx.fillText(pongGame.left.score, pongCanvas.width/2-42, 40);
+  ctx.fillText(pongGame.right.score, pongCanvas.width/2+24, 40);
+
+  ctx.strokeStyle = "#eee";
+  ctx.setLineDash([5, 7]);
+  ctx.beginPath();
+  ctx.moveTo(pongCanvas.width/2, 0);
+  ctx.lineTo(pongCanvas.width/2, pongCanvas.height);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// Bij tab wissel, reset Pong UI
+const origSwitchTab = switchTab;
+switchTab = function(tab) {
+  origSwitchTab(tab);
+  updatePongVisibility();
+};
+if (typeof app !== "undefined" && app) {
+  updatePongVisibility();
+}
