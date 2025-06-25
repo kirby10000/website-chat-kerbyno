@@ -113,13 +113,12 @@ body, html {
   display: flex;
   align-items: stretch;
   justify-content: flex-start;
-  /* Plaats geheel links en centreer verticaal met even veel ruimte boven/onder */
   position: absolute;
   left: 0;
   top: 0;
   height: 100vh;
   width: 100vw;
-  pointer-events: none; /* zorgt dat alleen children aanklikbaar zijn */
+  pointer-events: none;
 }
 
 .chat-inner {
@@ -137,6 +136,7 @@ body, html {
   pointer-events: all;
 }
 
+/* Sidebar: nu volledig scrollbaar binnen zijn blok */
 .sidebar {
   background: #fff;
   border-radius: 22px 0 0 22px;
@@ -150,6 +150,7 @@ body, html {
   gap: 16px;
   height: 100%;
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .sidebar input,
@@ -192,6 +193,7 @@ body, html {
   margin: 0;
 }
 
+/* Maak knoppen volledig klikbaar */
 .chat-item {
   position: relative;
   display: flex;
@@ -205,6 +207,15 @@ body, html {
   background-color: #ffbd4a;
   color: #000;
   transition: transform 0.1s, box-shadow 0.2s;
+  width: 100%;
+  min-height: 38px;
+  border: none;
+  outline: none;
+  /* Zorg dat kinderen geen eigen pointer-events blokkeren */
+}
+
+.chat-item > * {
+  pointer-events: none;
 }
 
 .chat-item:hover {
@@ -228,6 +239,7 @@ body, html {
   border-radius: 14px;
   margin-left: 8px;
   text-align: center;
+  pointer-events: none;
 }
 
 /* Main chatvenster: los wit blok met schaduw en afgeronde hoeken */
@@ -312,6 +324,7 @@ body, html {
   color: #888;
   display: flex;
   align-items: center;
+  pointer-events: auto !important;
 }
 
 .chat-menu-btn:hover {
@@ -329,6 +342,7 @@ body, html {
   z-index: 10;
   min-width: 120px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.09);
+  pointer-events: auto !important;
 }
 
 .chat-menu.active {
