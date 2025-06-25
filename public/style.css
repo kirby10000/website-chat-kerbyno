@@ -20,12 +20,10 @@ body, html {
   z-index: 9999;
   animation: fadein-bg 1.2s;
 }
-
 @keyframes fadein-bg {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-
 .login-center {
   width: 100%;
   height: 100%;
@@ -33,7 +31,6 @@ body, html {
   align-items: center;
   justify-content: center;
 }
-
 .login-card {
   background: rgba(255,255,255,0.96);
   border-radius: 22px;
@@ -44,13 +41,11 @@ body, html {
   text-align: center;
   animation: popin 0.8s;
 }
-
 @keyframes popin {
   0% { transform: scale(0.95) translateY(30px); opacity: 0; }
   80% { transform: scale(1.04) translateY(-6px); opacity: 1; }
   100% { transform: scale(1) translateY(0); }
 }
-
 .login-card h2 {
   margin: 0 0 12px 0;
   font-size: 2rem;
@@ -58,13 +53,11 @@ body, html {
   font-weight: 800;
   letter-spacing: 1px;
 }
-
 .login-card p {
   margin: 0 0 20px 0;
   color: #777;
   font-size: 1rem;
 }
-
 .login-card input {
   width: 100%;
   padding: 14px 12px;
@@ -76,11 +69,9 @@ body, html {
   transition: box-shadow 0.2s;
   box-sizing: border-box;
 }
-
 .login-card input:focus {
   box-shadow: 0 0 0 2px #ffb46e;
 }
-
 .login-card button {
   width: 100%;
   padding: 14px 0;
@@ -94,7 +85,6 @@ body, html {
   box-shadow: 0 2px 8px rgba(255,127,0,0.08);
   transition: background 0.2s;
 }
-
 .login-card button:hover {
   background: #e76f00;
 }
@@ -108,7 +98,6 @@ body, html {
   justify-content: flex-start;
   background: none;
 }
-
 .chat-container {
   display: flex;
   align-items: stretch;
@@ -120,7 +109,6 @@ body, html {
   width: 100vw;
   pointer-events: none;
 }
-
 .chat-inner {
   display: flex;
   flex-direction: row;
@@ -135,8 +123,6 @@ body, html {
   margin-right: 0;
   pointer-events: all;
 }
-
-/* Sidebar: nu volledig scrollbaar binnen zijn blok */
 .sidebar {
   background: #fff;
   border-radius: 22px 0 0 22px;
@@ -152,19 +138,16 @@ body, html {
   box-sizing: border-box;
   overflow-y: auto;
 }
-
 .sidebar input,
 .sidebar button {
   border-radius: 10px;
 }
-
 .sidebar input {
   padding: 10px;
   border: 1px solid #ccc;
   font-size: 14px;
   margin-bottom: 10px;
 }
-
 .sidebar button {
   padding: 10px;
   background: #ff7f00;
@@ -175,25 +158,20 @@ body, html {
   cursor: pointer;
   transition: background 0.3s;
 }
-
 .sidebar button:hover {
   background: #e76f00;
 }
-
 .sidebar h3 {
   margin-top: 20px;
   margin-bottom: 8px;
   font-size: 16px;
   color: #666;
 }
-
 .sidebar ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
-
-/* Maak knoppen volledig klikbaar */
 .chat-item {
   position: relative;
   display: flex;
@@ -211,23 +189,16 @@ body, html {
   min-height: 38px;
   border: none;
   outline: none;
-  /* Zorg dat kinderen geen eigen pointer-events blokkeren */
 }
-
-.chat-item > * {
-  pointer-events: none;
-}
-
+.chat-item > * { pointer-events: none; }
 .chat-item:hover {
   transform: scale(1.02);
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
-
 .chat-item.active {
   outline: 2px solid #ff7f00;
   box-shadow: 0 0 0 3px rgba(255,127,0,0.2);
 }
-
 .chat-unread-badge {
   display: none;
   min-width: 20px;
@@ -242,7 +213,7 @@ body, html {
   pointer-events: none;
 }
 
-/* Main chatvenster: los wit blok met schaduw en afgeronde hoeken */
+/* Main chatvenster */
 .main {
   background: #fff;
   border-radius: 0 22px 22px 0;
@@ -256,7 +227,6 @@ body, html {
   overflow: hidden;
   position: relative;
 }
-
 .chat-header {
   padding: 20px 32px 18px 32px;
   font-weight: bold;
@@ -265,7 +235,6 @@ body, html {
   background: #fafafa;
   border-radius: 0 22px 0 0;
 }
-
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -275,7 +244,6 @@ body, html {
   gap: 14px;
   background-color: #fff;
 }
-
 .chat-input {
   display: flex;
   gap: 10px;
@@ -286,7 +254,6 @@ body, html {
   margin: 16px;
   margin-bottom: 24px;
 }
-
 .chat-input input {
   flex: 1;
   padding: 15px;
@@ -294,7 +261,6 @@ body, html {
   border: 1px solid #ccc;
   font-size: 15px;
 }
-
 .chat-input button {
   padding: 14px 20px;
   background-color: #ff7f00;
@@ -305,15 +271,12 @@ body, html {
   font-size: 16px;
   transition: background 0.3s;
 }
-
 .chat-input button:hover {
   background-color: #e76f00;
 }
-
 .hidden {
   display: none;
 }
-
 /* 3-stipjes menu */
 .chat-menu-btn {
   background: none;
@@ -326,11 +289,9 @@ body, html {
   align-items: center;
   pointer-events: auto !important;
 }
-
 .chat-menu-btn:hover {
   color: #ff7f00;
 }
-
 .chat-menu {
   display: none;
   position: absolute;
@@ -344,11 +305,7 @@ body, html {
   box-shadow: 0 2px 8px rgba(0,0,0,0.09);
   pointer-events: auto !important;
 }
-
-.chat-menu.active {
-  display: block;
-}
-
+.chat-menu.active { display: block; }
 .chat-menu-option {
   padding: 10px 16px;
   cursor: pointer;
@@ -356,12 +313,10 @@ body, html {
   border-radius: 8px;
   transition: background 0.1s;
 }
-
 .chat-menu-option:hover {
   background: #ffe1b3;
   color: #ff7f00;
 }
-
 .message {
   background-color: #fff;
   border-radius: 16px;
@@ -374,13 +329,49 @@ body, html {
   word-break: break-word;
   overflow-wrap: anywhere;
 }
-
 .message .sender {
   font-weight: bold;
   font-size: 12px;
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* PONG */
+.pong-container {
+  width: 400px;
+  margin: 0 auto 18px auto;
+  padding: 18px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+  min-height: 270px;
+  max-width: 95%;
+  position: relative;
+  outline: none;
+  cursor: pointer;
+}
+.pong-container.pong-active {
+  cursor: default;
+  outline: 2px solid #ff7f00;
+}
+#pongCanvas {
+  border-radius: 13px;
+  background: #f9f9f9;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  margin-bottom: 10px;
+  border: 1px solid #eee;
+  display: block;
+}
+.pong-info {
+  font-size: 15px;
+  color: #666;
+  min-height: 24px;
+  text-align: center;
+  margin-bottom: 7px;
 }
 
 @media (max-width: 1000px) {
