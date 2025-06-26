@@ -90,11 +90,14 @@ socket.on("chat message", (msg) => {
     unreadCounts[msg.tab] = (unreadCounts[msg.tab] || 0) + 1;
     renderGroups();
     renderUsers();
-    playNotification();
-    if (window.Notification && Notification.permission === "granted") {
-      new Notification("Nieuw bericht in " + msg.tab, { body: msg.text });
-    } else if (window.Notification && Notification.permission !== "denied") {
-      Notification.requestPermission();
+    // Alleen melding als het niet je eigen bericht is:
+    if (msg.user !== username) {
+      playNotification();
+      if (window.Notification && Notification.permission === "granted") {
+        new Notification("Nieuw bericht in " + msg.tab, { body: msg.text });
+      } else if (window.Notification && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
     }
   }
 });
