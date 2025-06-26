@@ -21,6 +21,7 @@ const sendBtn = document.getElementById("sendBtn");
 const groupsList = document.getElementById("groupsList");
 const notifSound = document.getElementById("notifSound");
 
+// Notificatie geluid
 function playNotification() {
   if (notifSound) {
     notifSound.currentTime = 0;
@@ -28,6 +29,7 @@ function playNotification() {
   }
 }
 
+// Login
 enterChat.onclick = () => {
   const name = usernameInput.value.trim();
   if (!name) return;
@@ -39,6 +41,7 @@ enterChat.onclick = () => {
   socket.emit("get rooms");
 };
 
+// Groep aanmaken/joinen
 createRoomBtn.onclick = () => {
   const room = newRoomInput.value.trim();
   if (!room) return;
@@ -47,6 +50,7 @@ createRoomBtn.onclick = () => {
   newRoomInput.value = "";
 };
 
+// Enter om te versturen
 messageInput.addEventListener("keydown", function(e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -54,6 +58,7 @@ messageInput.addEventListener("keydown", function(e) {
   }
 });
 
+// Verzenden knop
 sendBtn.onclick = () => {
   const text = messageInput.value.trim();
   if (!text || !activeTab) return;
