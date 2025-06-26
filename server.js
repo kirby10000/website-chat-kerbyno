@@ -1,153 +1,138 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const http = require('http');
-const server = http.createServer(app);
-const { Server } = require('socket.io');
-const io = new Server(server);
+const http = require("http").Server(app);
+const io = require("socket.io")(http);
+const PORT = process.env.PORT || 3000;
 
-const users = {};
-const userRooms = {};
+app.use(express.static("public"));
 
-app.use(express.static('public'));
+let users = new Map(); // socket.id -> {name}
+let rooms = new Set(); // group names
+let pongGames = {};    // roomname -> pongstate
 
-io.on('connection', (socket) => {
-  socket.on('register', (name) => {
-    users[socket.id] = { name };
-    io.emit('all users', Object.values(users));
+function createPongState() {
+  return {
+    ball: { x: 200, y: 125, radius: 10, vx: 3, vy: 2 },
+    left: { y: 100, score: 0 },
+    right: { y: 100, score: 0 },
+    paddleW: 10,
+    paddleH: 60
+  };
+}
+
+io.on("connection", (socket) => {
+  socket.on("register", (name) => {
+    users.set(socket.id, { name });
+    sendUsers();
   });
 
-  socket.on('get users', () => {
-    socket.emit('all users', Object.values(users));
+  socket.on("get users", sendUsers);
+  function sendUsers() {
+    const uniqueUsers = [...new Set([...users.values()].map(u => u.name))];
+    io.emit("all users", uniqueUsers.map(name => ({ name })));
+  }
+
+  socket.on("get rooms", () => {
+    socket.emit("joined room", Array.from(rooms));
   });
 
-  socket.on('get rooms', () => {
-    const rooms = Object.keys(userRooms);
-    socket.emit('joined room', rooms);
-  });
-
-  socket.on('join room', (room) => {
+  socket.on("join room", (room) => {
+    rooms.add(room);
     socket.join(room);
-    userRooms[room] = userRooms[room] || [];
-    if (!userRooms[room].includes(socket.id)) userRooms[room].push(socket.id);
-    socket.emit('joined room', Object.keys(userRooms));
+    io.emit("joined room", Array.from(rooms));
   });
 
-  socket.on('chat message', (msg) => {
-    if (!users[socket.id]) return;
-    let tab = msg.tab;
-    let user = users[socket.id].name;
-    let color = "#ff7f00";
-    let text = msg.text;
-    io.emit('chat message', { user, text, tab, color });
-  });
-
-  socket.on('disconnect', () => {
-    if (users[socket.id]) delete users[socket.id];
-    Object.keys(userRooms).forEach(room => {
-      userRooms[room] = userRooms[room].filter(id => id !== socket.id);
-      if (userRooms[room].length === 0) delete userRooms[room];
-    });
-    io.emit('all users', Object.values(users));
-
-    // PONG disconnect
-    Object.keys(pongRooms).forEach(room => {
-      let g = pongRooms[room];
-      for (const r of ['left','right']) {
-        if (g.players[r] === socket.id) g.players[r] = null;
-      }
-      if ((!g.players.left && !g.players.right) && g.interval) {
-        clearInterval(g.interval);
-        delete pongRooms[room];
-      }
-    });
-  });
-
-  // ========== PONG ==========
-  socket.on('pong request', (room, partnerName) => {
-    let targetId = Object.entries(users).find(([sid, u]) => u.name === partnerName)?.[0];
-    if (targetId) {
-      io.to(targetId).emit('pong request', room, users[socket.id].name);
+  socket.on("chat message", (data) => {
+    // data: {tab, text}
+    const sender = users.get(socket.id);
+    if (!sender) return;
+    const msg = {
+      tab: data.tab,
+      user: sender.name,
+      text: data.text,
+      color: "#ff7f00"
+    };
+    if (rooms.has(data.tab)) {
+      io.to(data.tab).emit("chat message", msg);
+    } else {
+      // private chat
+      io.emit("chat message", msg);
     }
   });
-  socket.on('pong accept', (room, partnerName) => {
-    let targetId = Object.entries(users).find(([sid, u]) => u.name === partnerName)?.[0];
-    if (targetId) {
-      io.to(targetId).emit('pong accept', room, users[socket.id].name);
+
+  // ----- PONG EVENTS -----
+  socket.on('pong request', (room, partner) => {
+    socket.join(room);
+    // Vind de socket van de partner
+    for (let [id, u] of users.entries()) {
+      if (u.name === partner && id !== socket.id) {
+        io.to(id).emit('pong request', room, users.get(socket.id).name);
+      }
     }
+  });
+
+  socket.on('pong accept', (room, partner) => {
+    socket.join(room);
+    for (let [id, u] of users.entries()) {
+      if (u.name === partner && id !== socket.id) {
+        io.to(id).emit('pong accept', room, users.get(socket.id).name);
+      }
+    }
+    pongGames[room] = createPongState();
+    io.in(room).emit('pong start');
+    io.in(room).emit('pong state', room, pongGames[room]);
   });
 
   socket.on('pong join', (room, role) => {
     socket.join(room);
-    if (!pongRooms[room]) {
-      pongRooms[room] = {
-        room,
-        left: { y: 90, score: 0 },
-        right: { y: 90, score: 0 },
-        ball: { x: 200, y: 125, vx: 3, vy: 2, radius: 9 },
-        paddleH: 60,
-        paddleW: 10,
-        width: 400,
-        height: 250,
-        running: true,
-        players: {},
-        lastUpdate: Date.now()
-      };
-    }
-    pongRooms[room].players[role] = socket.id;
     socket.emit('pong role', role);
-
-    if (!pongRooms[room].interval) {
-      pongRooms[room].interval = setInterval(() => updatePongRoom(room), 1000/60);
-    }
-    io.to(room).emit('pong start');
+    if (pongGames[room]) socket.emit('pong state', room, pongGames[room]);
   });
 
   socket.on('pong move', (room, role, dir) => {
-    let g = pongRooms[room];
-    if (!g) return;
-    let speed = 5;
-    if (role === "left") g.left.y = Math.max(0, Math.min(g.height - g.paddleH, g.left.y + dir*speed));
-    if (role === "right") g.right.y = Math.max(0, Math.min(g.height - g.paddleH, g.right.y + dir*speed));
+    if (!pongGames[room]) return;
+    let paddle = role === 'left' ? pongGames[room].left : pongGames[room].right;
+    paddle.y += dir * 15;
+    paddle.y = Math.max(0, Math.min(250 - pongGames[room].paddleH, paddle.y));
+    io.in(room).emit('pong state', room, pongGames[room]);
+  });
+
+  socket.on("disconnect", () => {
+    users.delete(socket.id);
+    sendUsers();
   });
 });
 
-const pongRooms = {};
-function updatePongRoom(room) {
-  let g = pongRooms[room];
-  if (!g || !g.running) return;
-  g.ball.x += g.ball.vx;
-  g.ball.y += g.ball.vy;
-  if (g.ball.y < g.ball.radius || g.ball.y > g.height - g.ball.radius) g.ball.vy *= -1;
-  if (
-    g.ball.x - g.ball.radius < 10 + g.paddleW &&
-    g.ball.y > g.left.y &&
-    g.ball.y < g.left.y + g.paddleH
-  ) {
-    g.ball.vx = Math.abs(g.ball.vx);
+// Pong ticker
+setInterval(() => {
+  for (const room in pongGames) {
+    let g = pongGames[room];
+    g.ball.x += g.ball.vx;
+    g.ball.y += g.ball.vy;
+    // Bounce boven/onder
+    if (g.ball.y < g.ball.radius || g.ball.y > 250 - g.ball.radius) g.ball.vy *= -1;
+    // Paddle collision
+    if (
+      g.ball.x - g.ball.radius < 20 &&
+      g.ball.y > g.left.y &&
+      g.ball.y < g.left.y + g.paddleH
+    ) {
+      g.ball.vx *= -1;
+      g.ball.x = 20 + g.ball.radius;
+    }
+    if (
+      g.ball.x + g.ball.radius > 380 &&
+      g.ball.y > g.right.y &&
+      g.ball.y < g.right.y + g.paddleH
+    ) {
+      g.ball.vx *= -1;
+      g.ball.x = 380 - g.ball.radius;
+    }
+    // Score
+    if (g.ball.x < 0) { g.right.score++; Object.assign(g, createPongState()); }
+    if (g.ball.x > 400) { g.left.score++; Object.assign(g, createPongState()); }
+    io.in(room).emit('pong state', room, g);
   }
-  if (
-    g.ball.x + g.ball.radius > g.width-10-g.paddleW &&
-    g.ball.y > g.right.y &&
-    g.ball.y < g.right.y + g.paddleH
-  ) {
-    g.ball.vx = -Math.abs(g.ball.vx);
-  }
-  if (g.ball.x < 0) {
-    g.right.score++; resetPongBall(g, -1);
-  }
-  if (g.ball.x > g.width) {
-    g.left.score++; resetPongBall(g, +1);
-  }
-  io.to(room).emit('pong state', room, g);
-}
-function resetPongBall(g, dir) {
-  g.ball.x = g.width/2;
-  g.ball.y = g.height/2;
-  g.ball.vx = (dir || (Math.random()<0.5?-1:1)) * (2.3 + Math.random()*2.2);
-  g.ball.vy = (Math.random()<0.5?-1:1) * (2.0 + Math.random()*2.5);
-}
+}, 40);
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server gestart op http://localhost:${PORT}`);
-});
+http.listen(PORT, () => console.log("Server gestart op poort", PORT));
