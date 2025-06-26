@@ -55,8 +55,15 @@ io.on("connection", (socket) => {
     if (rooms.has(data.tab)) {
       io.to(data.tab).emit("chat message", msg);
     } else {
-      // private chat
-      io.emit("chat message", msg);
+      // privéchat: tab is de naam van de ontvanger
+      // zoek socket id van de ontvanger
+      let receiverId = null;
+      for (let [id, u] of users.entries()) {
+        if (u.name === data.tab) receiverId = id;
+      }
+      // stuur bericht naar de ontvanger én naar jezelf
+      if (receiverId) io.to(receiverId).emit("chat message", msg);
+      socket.emit("chat message", msg);
     }
   });
 
