@@ -52,17 +52,19 @@ io.on("connection", (socket) => {
       text: data.text,
       color: "#ff7f00"
     };
+    // Check: is het een groepsnaam?
     if (rooms.has(data.tab)) {
       io.to(data.tab).emit("chat message", msg);
-    } else {
-      // privéchat: tab is de naam van de ontvanger
-      // zoek socket id van de ontvanger
+    } else if (data.tab !== sender.name) {
+      // privébericht: tab = naam ontvanger
       let receiverId = null;
       for (let [id, u] of users.entries()) {
         if (u.name === data.tab) receiverId = id;
       }
-      // stuur bericht naar de ontvanger én naar jezelf
       if (receiverId) io.to(receiverId).emit("chat message", msg);
+      socket.emit("chat message", msg); // stuur ook naar jezelf
+    } else {
+      // Fallback: stuur alleen naar jezelf (je mag niet met jezelf chatten)
       socket.emit("chat message", msg);
     }
   });
@@ -70,7 +72,6 @@ io.on("connection", (socket) => {
   // ----- PONG EVENTS -----
   socket.on('pong request', (room, partner) => {
     socket.join(room);
-    // Vind de socket van de partner
     for (let [id, u] of users.entries()) {
       if (u.name === partner && id !== socket.id) {
         io.to(id).emit('pong request', room, users.get(socket.id).name);
