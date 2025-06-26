@@ -54,23 +54,22 @@ io.on("connection", (socket) => {
     };
 
     if (rooms.has(data.tab)) {
-      // GROEPSCHAT: stuur naar iedereen in de room
+      // GROEPSCHAT: stuur naar iedereen in de room (ook jezelf)
       io.to(data.tab).emit("chat message", msg);
     } else if (data.tab !== sender.name) {
-      // PRIVÉCHAT: stuur naar jezelf en de ander
-      let receiverId = null;
+      // PRIVÉCHAT: stuur naar jezelf en de ander (beide krijgen het bericht)
+      let receiverSockets = [];
       for (let [id, u] of users.entries()) {
-        if (u.name === data.tab) {
-          receiverId = id;
-          break;
-        }
+        if (u.name === data.tab) receiverSockets.push(id);
       }
-      if (receiverId) {
-        io.to(receiverId).emit("chat message", msg);
-      }
+      // Bericht naar ontvanger(s)
+      receiverSockets.forEach(id => {
+        io.to(id).emit("chat message", msg);
+      });
+      // Altijd ook naar jezelf
       socket.emit("chat message", msg);
     }
-    // geen io.emit, geen fallback
+    // Geen io.emit(), geen fallback
   });
 
   // ----- PONG EVENTS -----
