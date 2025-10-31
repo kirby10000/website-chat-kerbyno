@@ -1,54 +1,50 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Minimal Chat</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Chat App met Pong</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="loginScreen">
-  <div class="login-center">
-    <div class="login-card">
-      <h2>Welkom!</h2>
-      <p>Voer je gebruikersnaam in om te starten</p>
-      <input type="text" id="usernameInput" placeholder="Je naam">
-      <button id="enterChat">Start Chat</button>
+  <div id="loginScreen" class="login-bg">
+    <div class="login-center">
+      <div class="login-card">
+        <h2>Welkom!</h2>
+        <p>Vul je naam in om de chat te starten</p>
+        <input id="usernameInput" type="text" placeholder="Jouw naam..." autocomplete="off" autofocus>
+        <button id="enterChat">Start Chatten</button>
+      </div>
     </div>
   </div>
-</div>
-
-<div class="app hidden">
-  <div class="chat-container">
-    <div class="chat-inner">
-      <div class="sidebar">
-        <input type="text" id="newRoomInput" placeholder="Nieuwe groep">
-        <button id="createRoom">Groep aanmaken</button>
-        <h3>Gebruikers</h3>
-        <ul id="allUsersList"></ul>
-        <h3>Groepen</h3>
-        <ul id="groupsList"></ul>
-      </div>
-
-      <div class="main">
-        <div class="chat-header" id="chatHeader">Geen chat geselecteerd</div>
-        <div class="chat-messages" id="messages"></div>
-        <div class="chat-input">
-          <input type="text" id="messageInput" placeholder="Typ een bericht...">
-          <button id="sendBtn">Verstuur</button>
+  <div class="app hidden">
+    <div class="chat-container">
+      <div class="chat-inner">
+        <div class="sidebar">
+          <input id="newRoomInput" type="text" placeholder="Nieuwe groep...">
+          <button id="createRoom">Maak groep</button>
+          <h3>Groepen</h3>
+          <ul id="groupsList"></ul>
+          <h3>Alle gebruikers en chats</h3>
+          <ul id="allUsersList"></ul>
+        </div>
+        <div class="main">
+          <div class="chat-header" id="chatHeader">Geen chat geselecteerd</div>
+          <div class="chat-messages" id="messages"></div>
+          <div class="chat-input">
+            <input id="messageInput" type="text" placeholder="Typ een bericht...">
+            <button id="sendBtn">Verstuur</button>
+          </div>
         </div>
       </div>
-    </div>
-
-    <div class="pong-container hidden">
-      <div class="pong-info"></div>
-      <canvas id="pongCanvas"></canvas>
+      <!-- PONG STAAT RECHTS! -->
+      <div class="pong-container hidden" tabindex="0">
+        <canvas id="pongCanvas" width="400" height="250"></canvas>
+        <div class="pong-info"></div>
+      </div>
     </div>
   </div>
-</div>
-
-<audio id="notifSound" src="notif.mp3" preload="auto"></audio>
-<script src="/socket.io/socket.io.js"></script>
-<script src="script.js"></script>
+  <audio id="notifSound" src="https://notificationsounds.com/storage/sounds/file-sounds-1156-pristine.mp3" preload="auto"></audio>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
