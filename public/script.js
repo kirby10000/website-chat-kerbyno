@@ -1,133 +1,269 @@
 const socket = io();
-let username = '';
-let currentTab = '';
-let tabs = {}; // tab -> messages[]
-let unreadCounts = {}; // tab -> #unread
+let username = "";
+let activeTab = null;
+const tabs = {};         // { tabName: [messages] }
+let groups = [];
+let usernames = [];
+const unreadCounts = {};
+const deletedChats = new Set();
 
-// DOM
-const loginScreen = document.getElementById('loginScreen');
-const usernameInput = document.getElementById('usernameInput');
-const enterChat = document.getElementById('enterChat');
-const app = document.querySelector('.app');
-const allUsersList = document.getElementById('allUsersList');
-const groupsList = document.getElementById('groupsList');
-const chatHeader = document.getElementById('chatHeader');
-const messagesDiv = document.getElementById('messages');
-const messageInput = document.getElementById('messageInput');
-const sendBtn = document.getElementById('sendBtn');
-const newRoomInput = document.getElementById('newRoomInput');
-const createRoomBtn = document.getElementById('createRoom');
-const notifSound = document.getElementById('notifSound');
+// DOM elementen
+const loginScreen = document.getElementById("loginScreen");
+const enterChat = document.getElementById("enterChat");
+const usernameInput = document.getElementById("usernameInput");
+const app = document.querySelector(".app");
+const allUsersList = document.getElementById("allUsersList");
+const newRoomInput = document.getElementById("newRoomInput");
+const createRoomBtn = document.getElementById("createRoom");
+const chatHeader = document.getElementById("chatHeader");
+const messagesDiv = document.getElementById("messages");
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const groupsList = document.getElementById("groupsList");
+const notifSound = document.getElementById("notifSound");
 
-enterChat.addEventListener('click', () => {
-    const val = usernameInput.value.trim();
-    if(!val) return alert('Voer je naam in');
-    username = val;
-    socket.emit('register', username);
-    loginScreen.classList.add('hidden');
-    app.classList.remove('hidden');
-});
-
-createRoomBtn.addEventListener('click', () => {
-    const room = newRoomInput.value.trim();
-    if(!room) return;
-    socket.emit('join room', room);
-    newRoomInput.value = '';
-});
-
-// SEND MESSAGE
-sendBtn.addEventListener('click', sendMessage);
-messageInput.addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
-
-function sendMessage() {
-    const text = messageInput.value.trim();
-    if(!text || !currentTab) return;
-    socket.emit('chat message', { tab: currentTab, text });
-    messageInput.value = '';
-}
-
-// RECEIVE USERS
-socket.on('all users', users => {
-    allUsersList.innerHTML = '';
-    users.filter(u => u.name !== username).forEach(u => {
-        const li = document.createElement('li');
-        li.textContent = u.name;
-        li.className='chat-item';
-        li.addEventListener('click', () => openTab(u.name));
-        if(unreadCounts[u.name]) addBadge(li, unreadCounts[u.name]);
-        allUsersList.appendChild(li);
-    });
-});
-
-// RECEIVE ROOMS
-socket.on('joined room', rooms => {
-    groupsList.innerHTML = '';
-    rooms.forEach(r => {
-        const li = document.createElement('li');
-        li.textContent = r;
-        li.className='chat-item';
-        li.addEventListener('click', () => openTab(r));
-        if(unreadCounts[r]) addBadge(li, unreadCounts[r]);
-        groupsList.appendChild(li);
-    });
-});
-
-// RECEIVE MESSAGE
-socket.on('chat message', msg => {
-    if(!tabs[msg.tab]) tabs[msg.tab] = [];
-    tabs[msg.tab].push(msg);
-
-    // Badge
-    if(currentTab!==msg.tab){
-        unreadCounts[msg.tab] = (unreadCounts[msg.tab]||0)+1;
-        updateBadges();
+// ================= Notificaties =================
+function playNotification() {
+    if (notifSound) {
+        notifSound.currentTime = 0;
         notifSound.play();
     }
-
-    if(currentTab===msg.tab) renderMessages();
-});
-
-// OPEN TAB
-function openTab(tab){
-    currentTab = tab;
-    chatHeader.textContent = tab;
-    if(!tabs[tab]) tabs[tab]=[];
-    unreadCounts[tab]=0;
-    updateBadges();
-    renderMessages();
 }
 
-// RENDER MESSAGES
-function renderMessages(){
-    messagesDiv.innerHTML='';
-    tabs[currentTab].forEach(m=>{
-        const div = document.createElement('div');
-        div.className='message';
-        div.innerHTML=`<div class="sender">${m.user}</div>${m.text}`;
+// ================= Login =================
+function startChat() {
+    const name = usernameInput.value.trim();
+    if (!name) return alert("Voer je naam in");
+    username = name;
+    socket.emit("register", username);
+    socket.emit("get users");
+    socket.emit("get rooms");
+
+    // Verberg login, laat chat zien
+    loginScreen.style.display = "none";
+    app.classList.remove("hidden");
+}
+
+enterChat.addEventListener("click", startChat);
+usernameInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") startChat();
+});
+
+// ================= Chat =================
+// Nieuwe groep aanmaken
+createRoomBtn.onclick = () => {
+    const room = newRoomInput.value.trim();
+    if (!room) return;
+    deletedChats.delete(room);
+    socket.emit("join room", room);
+    newRoomInput.value = "";
+};
+
+// Verzenden met Enter
+messageInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendBtn.click();
+    }
+});
+
+// Verzenden knop
+sendBtn.onclick = () => {
+    const text = messageInput.value.trim();
+    if (!text || !activeTab) return;
+    if (deletedChats.has(activeTab)) return;
+    const msg = { tab: activeTab, text };
+    socket.emit("chat message", msg);
+    messageInput.value = "";
+};
+
+// ================= Socket Events =================
+socket.on("all users", (users) => {
+    // filter jezelf eruit
+    usernames = users.map(u => u.name).filter(n => n !== username);
+    renderUsers();
+});
+
+socket.on("joined room", (myRooms) => {
+    groups = myRooms.filter(room => !deletedChats.has(room));
+    renderGroups();
+});
+
+socket.on("chat message", (msg) => {
+    if (deletedChats.has(msg.tab)) return;
+    if (!tabs[msg.tab]) tabs[msg.tab] = [];
+    tabs[msg.tab].push(msg);
+
+    if (msg.tab === activeTab) {
+        renderMessages();
+        unreadCounts[msg.tab] = 0;
+    } else {
+        unreadCounts[msg.tab] = (unreadCounts[msg.tab] || 0) + 1;
+        renderGroups();
+        renderUsers();
+        // notificatie alleen voor berichten van anderen
+        if (msg.user !== username) {
+            playNotification();
+            if (window.Notification && Notification.permission === "granted") {
+                new Notification("Nieuw bericht in " + msg.tab, { body: msg.text });
+            } else if (window.Notification && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+        }
+    }
+});
+
+// ================= Tabs =================
+function switchTab(tab) {
+    if (deletedChats.has(tab)) return;
+    activeTab = tab;
+    chatHeader.textContent = tab;
+    unreadCounts[tab] = 0;
+    renderMessages();
+    renderGroups();
+    renderUsers();
+    deletedChats.delete(tab);
+    updatePongVisibility();
+}
+
+function createChatItem(name, isGroup = false) {
+    if (deletedChats.has(name)) return document.createComment("verwijderde chat");
+
+    const li = document.createElement("li");
+    li.classList.add("chat-item");
+    if (name === activeTab) li.classList.add("active");
+
+    li.onclick = (e) => {
+        if (
+            e.target.closest(".chat-menu-btn") ||
+            e.target.closest(".chat-menu") ||
+            e.target.classList.contains("chat-menu-option")
+        ) return;
+
+        if (deletedChats.has(name)) return;
+        if (!tabs[name]) tabs[name] = [];
+        switchTab(name);
+
+        if (isGroup) {
+            deletedChats.delete(name);
+            socket.emit("join room", name);
+        }
+        closeAllMenus();
+    };
+
+    const span = document.createElement("span");
+    span.textContent = name;
+    span.style.flex = "1";
+    span.style.userSelect = "none";
+
+    const badge = document.createElement("span");
+    badge.className = "chat-unread-badge";
+    if (unreadCounts[name] > 0) {
+        badge.textContent = unreadCounts[name];
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+
+    const menuBtn = document.createElement("button");
+    menuBtn.className = "chat-menu-btn";
+    menuBtn.innerHTML = "&#8942;";
+    const chatMenu = document.createElement("div");
+    chatMenu.className = "chat-menu";
+    menuBtn.onclick = function(e) {
+        e.stopPropagation();
+        closeAllMenus();
+        chatMenu.classList.toggle("active");
+    };
+
+    const removeOption = document.createElement("div");
+    removeOption.className = "chat-menu-option";
+    removeOption.textContent = "Chat verwijderen";
+    removeOption.onclick = function(e) {
+        e.stopPropagation();
+        deletedChats.add(name);
+        if (isGroup) {
+            groups = groups.filter(g => g !== name);
+            renderGroups();
+        }
+        delete tabs[name];
+        delete unreadCounts[name];
+        if (activeTab === name) {
+            activeTab = null;
+            chatHeader.textContent = "Geen chat geselecteerd";
+            messagesDiv.innerHTML = "";
+        }
+        renderGroups();
+        renderUsers();
+        closeAllMenus();
+    };
+    chatMenu.appendChild(removeOption);
+
+    li.appendChild(span);
+    li.appendChild(badge);
+    li.appendChild(menuBtn);
+    li.appendChild(chatMenu);
+    li.addEventListener("mouseleave", closeAllMenus);
+
+    return li;
+}
+
+function closeAllMenus() {
+    document.querySelectorAll(".chat-menu.active").forEach(menu => menu.classList.remove("active"));
+}
+
+function renderGroups() {
+    groupsList.innerHTML = "";
+    groups.forEach(room => {
+        const groupItem = createChatItem(room, true);
+        if (groupItem) groupsList.appendChild(groupItem);
+    });
+}
+
+function renderUsers() {
+    allUsersList.innerHTML = "";
+    usernames.forEach(name => {
+        const userItem = createChatItem(name, false);
+        if (userItem) allUsersList.appendChild(userItem);
+    });
+}
+
+function renderMessages() {
+    messagesDiv.innerHTML = "";
+    if (!tabs[activeTab]) return;
+    tabs[activeTab].forEach(msg => {
+        const div = document.createElement("div");
+        div.classList.add("message");
+
+        const sender = document.createElement("div");
+        sender.classList.add("sender");
+        sender.textContent = msg.user;
+        sender.style.color = msg.color || "#ff7f00";
+
+        const content = document.createElement("div");
+        content.textContent = msg.text;
+
+        div.appendChild(sender);
+        div.appendChild(content);
         messagesDiv.appendChild(div);
     });
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// BADGES
-function addBadge(li, count){
-    let span = li.querySelector('.chat-unread-badge');
-    if(!span){
-        span = document.createElement('span');
-        span.className='chat-unread-badge';
-        li.appendChild(span);
-    }
-    span.textContent = count;
-    span.style.display = count>0?'inline-block':'none';
-}
-function updateBadges(){
-    document.querySelectorAll('.chat-item').forEach(li=>{
-        const tab = li.textContent.replace(/\d+$/,'').trim();
-        const count = unreadCounts[tab]||0;
-        addBadge(li, count);
-    });
+// ================= Notificatie permissie =================
+if (window.Notification && Notification.permission !== "granted") {
+    Notification.requestPermission();
 }
 
-// INITIAL DATA
-socket.emit('get users');
-socket.emit('get rooms');
+// ================= PONG =================
+// ... Je originele Pong code blijft hier, geen aanpassing nodig
+
+// Update tab functie om Pong te tonen/verbergen
+const origSwitchTab = switchTab;
+switchTab = function(tab) {
+    origSwitchTab(tab);
+    updatePongVisibility();
+};
+if (typeof app !== "undefined" && app) {
+    updatePongVisibility();
+}
