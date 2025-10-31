@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const app = express();
 const http = require("http").Server(app);
 const io = require("socket.io")(http);
@@ -6,6 +7,14 @@ const PORT = process.env.PORT || 3000;
 
 // Serve static assets from the current project directory
 app.use(express.static(__dirname));
+
+// Serve index.html on root to avoid "Cannot GET /" on some hosts
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// Optional health endpoint for deploy platforms
+app.get("/health", (req, res) => res.status(200).send("ok"));
 
 let users = new Map(); // socket.id -> {name}
 let rooms = new Set(); // group names
