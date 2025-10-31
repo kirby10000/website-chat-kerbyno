@@ -45,6 +45,31 @@ function sendMessage(){
   if(!text||!currentTab) return;
   socket.emit('chat message',{tab:currentTab,text});
   messageInput.value='';
+  // direct lokaal toevoegen
+  const msg={user:username,text,tab:currentTab,color:"#ff7f00"};
+  addMessage(msg);
+}
+
+function addMessage(msg){
+  if(!chatHistory[msg.tab]) chatHistory[msg.tab]=[];
+  chatHistory[msg.tab].push(msg);
+  if(msg.tab!==currentTab){
+    unread[msg.tab]=(unread[msg.tab]||0)+1;
+    updateBadge(msg.tab);
+    if(msg.user!==username) notifSound.play();
+    return;
+  }
+  appendMessage(msg);
+  unread[msg.tab]=0;
+  updateBadge(msg.tab);
+}
+
+function appendMessage(msg){
+  const div=document.createElement('div');
+  div.className='message';
+  div.innerHTML=`<span class="sender">${msg.user}</span>${msg.text}`;
+  messages.appendChild(div);
+  messages.scrollTop=messages.scrollHeight;
 }
 
 // SOCKET EVENTS
@@ -59,18 +84,7 @@ socket.on('joined room', rooms=>{
 });
 
 socket.on('chat message', msg=>{
-  if(!chatHistory[msg.tab]) chatHistory[msg.tab]=[];
-  chatHistory[msg.tab].push(msg);
-
-  if(msg.tab!==currentTab){
-    unread[msg.tab]=(unread[msg.tab]||0)+1;
-    updateBadge(msg.tab);
-    if(msg.user!==username) notifSound.play();
-    return;
-  }
-  appendMessage(msg);
-  unread[msg.tab]=0;
-  updateBadge(msg.tab);
+  addMessage(msg);
 });
 
 // RENDER USERS & GROUPS
@@ -113,20 +127,10 @@ function updateBadge(tab){
   });
 }
 
-// SELECT TAB
 function selectTab(tab){
   currentTab=tab;
   chatHeader.textContent=tab;
   messages.innerHTML='';
   if(chatHistory[tab]) chatHistory[tab].forEach(appendMessage);
   unread[tab]=0; updateBadge(tab);
-}
-
-// APPEND MESSAGE
-function appendMessage(msg){
-  const div=document.createElement('div');
-  div.className='message';
-  div.innerHTML=`<span class="sender">${msg.user}</span>${msg.text}`;
-  messages.appendChild(div);
-  messages.scrollTop=messages.scrollHeight;
 }
