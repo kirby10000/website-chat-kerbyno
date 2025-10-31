@@ -11,8 +11,8 @@
   <div class="login-center">
     <div class="login-card">
       <h2>Welkom!</h2>
-      <p>Voer je gebruikersnaam in:</p>
-      <input type="text" id="usernameInput" placeholder="Gebruikersnaam">
+      <p>Voer je gebruikersnaam in om te starten</p>
+      <input type="text" id="usernameInput" placeholder="Je naam">
       <button id="enterChat">Start Chat</button>
     </div>
   </div>
@@ -22,16 +22,16 @@
   <div class="chat-container">
     <div class="chat-inner">
       <div class="sidebar">
+        <input type="text" id="newRoomInput" placeholder="Nieuwe groep">
+        <button id="createRoom">Groep aanmaken</button>
         <h3>Gebruikers</h3>
         <ul id="allUsersList"></ul>
         <h3>Groepen</h3>
         <ul id="groupsList"></ul>
-        <input type="text" id="newRoomInput" placeholder="Nieuwe groep">
-        <button id="createRoom">Maak groep</button>
       </div>
 
       <div class="main">
-        <div class="chat-header" id="chatHeader">Selecteer een chat</div>
+        <div class="chat-header" id="chatHeader">Geen chat geselecteerd</div>
         <div class="chat-messages" id="messages"></div>
         <div class="chat-input">
           <input type="text" id="messageInput" placeholder="Typ een bericht...">
@@ -41,13 +41,13 @@
     </div>
 
     <div class="pong-container hidden">
-      <canvas id="pongCanvas"></canvas>
       <div class="pong-info"></div>
+      <canvas id="pongCanvas"></canvas>
     </div>
   </div>
 </div>
 
-<audio id="notifSound" src="notif.mp3"></audio>
+<audio id="notifSound" src="notif.mp3" preload="auto"></audio>
 <script src="/socket.io/socket.io.js"></script>
 <script src="script.js"></script>
 </body>
