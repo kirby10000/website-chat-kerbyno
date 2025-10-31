@@ -5,7 +5,7 @@ html, body {
   font-family: 'Segoe UI', Arial, sans-serif;
   background: linear-gradient(120deg, #ffecd2 0%, #fcb69f 100%);
   color: #333;
-  overflow: hidden; /* voorkom scrollen */
+  overflow: hidden;
   box-sizing: border-box;
 }
 
