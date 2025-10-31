@@ -1,16 +1,33 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const app = express();
 const http = require("http").Server(app);
 const io = require("socket.io")(http);
 const PORT = process.env.PORT || 3000;
 
-// Serve static assets from the current project directory
+// Prefer serving static assets from 'public' if present; otherwise also serve project root
+const publicDir = path.join(__dirname, "public");
+if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+}
 app.use(express.static(__dirname));
 
-// Serve index.html on root to avoid "Cannot GET /" on some hosts
+// Serve index.html on root; prefer public/index.html when available
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  const publicIndex = path.join(publicDir, "index.html");
+  if (fs.existsSync(publicIndex)) return res.sendFile(publicIndex);
+  const indexPath = path.join(__dirname, "index.html");
+  if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.send(`<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body><div>Indexbestand niet gevonden op deploy. Basis UI geladen.</div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/script.js"></script>
+  </body></html>`);
 });
 
 // Optional health endpoint for deploy platforms
