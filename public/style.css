@@ -305,6 +305,26 @@ html, body {
   overflow: hidden;
   transition: all 0.3s ease;
   position: relative;
+  cursor: pointer;
+}
+
+/* Collapsed state: alleen een smalle rand rechts */
+.pong-container.collapsed {
+  width: 8px;
+  min-width: 8px;
+  max-width: 8px;
+  border-radius: 22px 0 0 22px;
+  background: linear-gradient(135deg, #ff7f00 0%, #ffb46e 100%);
+  box-shadow: 0 4px 16px rgba(255, 127, 0, 0.3);
+  cursor: pointer;
+  overflow: visible;
+}
+
+.pong-container.collapsed:hover {
+  width: 12px;
+  min-width: 12px;
+  max-width: 12px;
+  box-shadow: 0 6px 20px rgba(255, 127, 0, 0.4);
 }
 
 .pong-header {
@@ -317,6 +337,11 @@ html, body {
   border-radius: 22px 0 0 0;
   min-height: 65px;
   box-sizing: border-box;
+  transition: opacity 0.3s ease;
+}
+
+.pong-container.collapsed .pong-header {
+  display: none;
 }
 
 .pong-header h3 {
@@ -344,6 +369,10 @@ html, body {
 .pong-toggle-btn:hover {
   background: #f0f0f0;
   color: #ff7f00;
+}
+
+.pong-container.collapsed .pong-toggle-btn {
+  display: none;
 }
 
 .pong-toggle-icon {
@@ -378,15 +407,126 @@ html, body {
   outline: 2px solid #ff7f00; 
 }
 
+.pong-game-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  min-width: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 #pongCanvas {
   width: 100%;
   max-width: 600px;
   min-width: 200px;
   height: 250px;
-  background: #f9f9f9;
-  border: 1px solid #eee;
-  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 2px solid #fff;
+  border-radius: 16px;
   display: block;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.pong-win-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  animation: fadeIn 0.3s ease;
+}
+
+.pong-win-overlay.hidden {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.pong-win-content {
+  text-align: center;
+  color: #fff;
+  animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pong-win-title {
+  font-size: 36px;
+  font-weight: bold;
+  margin: 0 0 16px 0;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: pulse 1.5s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.pong-win-score {
+  font-size: 24px;
+  margin: 0 0 24px 0;
+  color: #ffd700;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.pong-play-again-btn {
+  padding: 14px 32px;
+  font-size: 18px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #ff7f00 0%, #ffb46e 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 127, 0, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pong-play-again-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 127, 0, 0.5);
+  background: linear-gradient(135deg, #ff8f20 0%, #ffc488 100%);
+}
+
+.pong-play-again-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(255, 127, 0, 0.4);
 }
 
 .pong-info {
@@ -395,20 +535,21 @@ html, body {
   margin-top: 12px;
   min-height: 24px;
   text-align: center;
+  font-weight: 500;
 }
 
 @media (max-width: 1100px) {
-  .pong-container { width: 260px; min-width: 150px; }
+  .pong-container:not(.collapsed) { width: 260px; min-width: 150px; }
   .sidebar { width: 120px; min-width: 80px; }
 }
 @media (max-width: 900px) {
   .chat-container { flex-direction: column; }
-  .pong-container, .chat-inner { height: 44vh; max-width: 100vw; }
+  .pong-container:not(.collapsed), .chat-inner { height: 44vh; max-width: 100vw; }
   #pongCanvas { width: 99vw !important; }
 }
 @media (max-width: 600px) {
   .chat-container { flex-direction: column; }
-  .pong-container, .chat-inner { width: 100vw !important; height: auto; }
+  .pong-container:not(.collapsed), .chat-inner { width: 100vw !important; height: auto; }
   #pongCanvas { width: 100vw !important; }
   .main { max-width: 100vw !important; min-width: 0 !important; }
   .sidebar { width: 100%; max-width: 100vw; }
