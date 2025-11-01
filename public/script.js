@@ -31,6 +31,60 @@ function initSocket() {
     console.error("Socket verbindingsfout:", error);
     alert("Kan niet verbinden met server. Herlaad de pagina.");
   });
+  
+  // Register socket event listeners for chat functionality
+  setupSocketListeners();
+}
+
+// Setup all socket event listeners
+function setupSocketListeners() {
+  if (!socket) return;
+  
+  socket.on("all users", (users) => {
+    usernames = users.map(u => u.name);
+    renderUsers();
+    renderGroups();
+  });
+
+  socket.on("joined room", (myRooms) => {
+    allRooms = myRooms;
+    renderGroups();
+  });
+
+  socket.on("chat message", (msg) => {
+    if (deletedChats.has(msg.tab)) return;
+
+    // Voor privé-chats: zorg dat de andere persoon in de gebruikerslijst staat
+    // msg.tab is de naam van de andere persoon bij privé-chats
+    if (!usernames.includes(msg.tab) && !allRooms.includes(msg.tab)) {
+      // Nieuwe gebruiker ontdekt via privé-bericht, haal gebruikerslijst opnieuw op
+      socket.emit("get users");
+    }
+
+    if (!tabs[msg.tab]) tabs[msg.tab] = [];
+    tabs[msg.tab].push(msg);
+
+    if (msg.tab === activeTab) {
+      renderMessages();
+      unreadCounts[msg.tab] = 0;
+    } else {
+      unreadCounts[msg.tab] = (unreadCounts[msg.tab] || 0) + 1;
+      renderGroups();
+      renderUsers();
+      // Alleen melding als het niet je eigen bericht is:
+      if (msg.user !== username) {
+        playNotification();
+        if (window.Notification && Notification.permission === "granted") {
+          new Notification("Nieuw bericht in " + msg.tab, { body: msg.text });
+        } else if (window.Notification && Notification.permission !== "denied") {
+          Notification.requestPermission();
+        }
+      }
+    }
+  });
+  
+  // Setup Pong socket listeners
+  setupPongSocketListeners();
 }
 
 // Start initialization
@@ -129,75 +183,40 @@ function setupLoginHandlers() {
 }
 
 // Groep aanmaken/joinen
-createRoomBtn.onclick = () => {
-  const room = newRoomInput.value.trim();
-  if (!room) return;
-  deletedChats.delete(room);
-  socket.emit("join room", room);
-  newRoomInput.value = "";
-  if (!tabs[room]) tabs[room] = [];
-  switchTab(room);
-};
+if (createRoomBtn) {
+  createRoomBtn.onclick = () => {
+    if (!socket || !newRoomInput) return;
+    const room = newRoomInput.value.trim();
+    if (!room) return;
+    deletedChats.delete(room);
+    socket.emit("join room", room);
+    newRoomInput.value = "";
+    if (!tabs[room]) tabs[room] = [];
+    switchTab(room);
+  };
+}
 
 // Enter om te versturen
-messageInput.addEventListener("keydown", function(e) {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendBtn.click();
-  }
-});
+if (messageInput) {
+  messageInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (sendBtn) sendBtn.click();
+    }
+  });
+}
 
 // Verzenden knop
-sendBtn.onclick = () => {
-  const text = messageInput.value.trim();
-  if (!text || !activeTab) return;
-  if (deletedChats.has(activeTab)) return;
-  socket.emit("chat message", { tab: activeTab, text });
-  messageInput.value = "";
-};
-
-socket.on("all users", (users) => {
-  usernames = users.map(u => u.name);
-  renderUsers();
-  renderGroups();
-});
-
-socket.on("joined room", (myRooms) => {
-  allRooms = myRooms;
-  renderGroups();
-});
-
-socket.on("chat message", (msg) => {
-  if (deletedChats.has(msg.tab)) return;
-
-  // Voor privé-chats: zorg dat de andere persoon in de gebruikerslijst staat
-  // msg.tab is de naam van de andere persoon bij privé-chats
-  if (!usernames.includes(msg.tab) && !allRooms.includes(msg.tab)) {
-    // Nieuwe gebruiker ontdekt via privé-bericht, haal gebruikerslijst opnieuw op
-    socket.emit("get users");
-  }
-
-  if (!tabs[msg.tab]) tabs[msg.tab] = [];
-  tabs[msg.tab].push(msg);
-
-  if (msg.tab === activeTab) {
-    renderMessages();
-    unreadCounts[msg.tab] = 0;
-  } else {
-    unreadCounts[msg.tab] = (unreadCounts[msg.tab] || 0) + 1;
-    renderGroups();
-    renderUsers();
-    // Alleen melding als het niet je eigen bericht is:
-    if (msg.user !== username) {
-      playNotification();
-      if (window.Notification && Notification.permission === "granted") {
-        new Notification("Nieuw bericht in " + msg.tab, { body: msg.text });
-      } else if (window.Notification && Notification.permission !== "denied") {
-        Notification.requestPermission();
-      }
-    }
-  }
-});
+if (sendBtn) {
+  sendBtn.onclick = () => {
+    if (!socket || !activeTab) return;
+    const text = messageInput.value.trim();
+    if (!text || !activeTab) return;
+    if (deletedChats.has(activeTab)) return;
+    socket.emit("chat message", { tab: activeTab, text });
+    messageInput.value = "";
+  };
+}
 
 function switchTab(tab) {
   if (deletedChats.has(tab)) return;
@@ -298,6 +317,10 @@ function closeAllMenus() {
 }
 
 function renderGroups() {
+  if (!groupsList) {
+    console.error("groupsList niet gevonden!");
+    return;
+  }
   groupsList.innerHTML = "";
   groups = allRooms.filter(room => !usernames.includes(room) && !deletedChats.has(room));
   groups.forEach(room => {
@@ -307,6 +330,10 @@ function renderGroups() {
 }
 
 function renderUsers() {
+  if (!allUsersList) {
+    console.error("allUsersList niet gevonden!");
+    return;
+  }
   allUsersList.innerHTML = "";
   usernames.forEach(name => {
     if (name === username) return;
@@ -413,35 +440,63 @@ pongContainer.addEventListener('click', function() {
   }
 });
 
-socket.on('pong request', (room, partner) => {
-  if (pongRoom !== room) return;
-  if (pongWanted) {
-    pongStart(partner, false);
-    socket.emit('pong accept', room, partner);
-  } else {
-    pongInfo.textContent = `${partner} wil Pong spelen! Klik om te starten.`;
-    pongContainer.classList.add('pong-active');
-    pongYouInvited = false;
-    pongContainer.onclick = function() {
-      if (!pongReady) {
-        pongWanted = true;
-        pongContainer.classList.add('pong-active');
-        pongInfo.textContent = 'Wachten op tegenstander...';
-        pongStart(partner, false);
-        socket.emit('pong accept', room, partner);
-      }
-    };
-  }
-});
+function setupPongSocketListeners() {
+  if (!socket) return;
+  
+  socket.on('pong request', (room, partner) => {
+    if (pongRoom !== room) return;
+    if (pongWanted) {
+      pongStart(partner, false);
+      socket.emit('pong accept', room, partner);
+    } else {
+      pongInfo.textContent = `${partner} wil Pong spelen! Klik om te starten.`;
+      pongContainer.classList.add('pong-active');
+      pongYouInvited = false;
+      pongContainer.onclick = function() {
+        if (!pongReady) {
+          pongWanted = true;
+          pongContainer.classList.add('pong-active');
+          pongInfo.textContent = 'Wachten op tegenstander...';
+          pongStart(partner, false);
+          socket.emit('pong accept', room, partner);
+        }
+      };
+    }
+  });
 
-socket.on('pong accept', (room, partner) => {
-  if (pongRoom !== room) return;
-  if (pongWanted && !pongReady) {
-    pongStart(partner, true);
-  }
-});
+  socket.on('pong accept', (room, partner) => {
+    if (pongRoom !== room) return;
+    if (pongWanted && !pongReady) {
+      pongStart(partner, true);
+    }
+  });
+
+  socket.on('pong state', (room, state) => {
+    if (pongRoom === room) {
+      pongGame = state;
+      drawPong();
+    }
+  });
+  
+  socket.on('pong role', (role) => {
+    pongRole = role;
+  });
+  
+  socket.on('pong start', () => {
+    pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
+  });
+
+  // Gameover: show win/lose based on your role, then stop
+  socket.on('pong gameover', (room, winnerRole) => {
+    if (pongRoom !== room) return;
+    const youWin = pongRole && winnerRole === pongRole;
+    pongInfo.textContent = youWin ? 'Je hebt gewonnen! 🎉' : 'Je hebt verloren. 😞';
+    stopPong();
+  });
+}
 
 function pongStart(otherName, youInvite) {
+  if (!socket) return;
   pongReady = true;
   pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
   pongContainer.classList.add('pong-active');
@@ -456,27 +511,6 @@ function pongStart(otherName, youInvite) {
     if (pongGame) drawPong();
   }, 1000/60);
 }
-
-socket.on('pong state', (room, state) => {
-  if (pongRoom === room) {
-    pongGame = state;
-    drawPong();
-  }
-});
-socket.on('pong role', (role) => {
-  pongRole = role;
-});
-socket.on('pong start', () => {
-  pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
-});
-
-// Gameover: show win/lose based on your role, then stop
-socket.on('pong gameover', (room, winnerRole) => {
-  if (pongRoom !== room) return;
-  const youWin = pongRole && winnerRole === pongRole;
-  pongInfo.textContent = youWin ? 'Je hebt gewonnen! 🎉' : 'Je hebt verloren. 😞';
-  stopPong();
-});
 
 // Track welke keys ingedrukt zijn voor continue beweging
 const pressedKeys = new Set();
