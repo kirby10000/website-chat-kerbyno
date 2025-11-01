@@ -295,6 +295,10 @@ function createChatItem(name, isGroup = false) {
   span.textContent = name;
   span.style.flex = "1";
   span.style.userSelect = "none";
+  span.style.overflow = "hidden";
+  span.style.textOverflow = "ellipsis";
+  span.style.whiteSpace = "nowrap";
+  span.style.minWidth = "0";
 
   const badge = document.createElement("span");
   badge.className = "chat-unread-badge";
