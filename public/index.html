@@ -37,9 +37,17 @@
         </div>
       </div>
       <!-- PONG STAAT RECHTS! -->
-      <div class="pong-container hidden" tabindex="0">
-        <canvas id="pongCanvas" width="400" height="250"></canvas>
-        <div class="pong-info"></div>
+      <div class="pong-container collapsed" tabindex="0">
+        <div class="pong-header">
+          <h3>Pong</h3>
+          <button class="pong-toggle-btn" id="pongToggleBtn" title="Inklappen/Uitklappen">
+            <span class="pong-toggle-icon">▼</span>
+          </button>
+        </div>
+        <div class="pong-content">
+          <canvas id="pongCanvas" width="400" height="250"></canvas>
+          <div class="pong-info"></div>
+        </div>
       </div>
     </div>
   </div>
