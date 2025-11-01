@@ -40,8 +40,8 @@ let pongGames = {};    // roomname -> pongstate
 function createPongState() {
   return {
     ball: { x: 200, y: 125, radius: 10, vx: 3, vy: 2 },
-    left: { y: 100, score: 0 },
-    right: { y: 100, score: 0 },
+    left: { y: 100, score: 0, vy: 0 },
+    right: { y: 100, score: 0, vy: 0 },
     paddleW: 10,
     paddleH: 60
   };
@@ -130,7 +130,7 @@ io.on("connection", (socket) => {
   socket.on('pong move', (room, role, dir) => {
     if (!pongGames[room]) return;
     let paddle = role === 'left' ? pongGames[room].left : pongGames[room].right;
-    paddle.y += dir * 15;
+    paddle.y += dir * 8; // Kleiner stap voor soepelere beweging
     paddle.y = Math.max(0, Math.min(250 - pongGames[room].paddleH, paddle.y));
     io.in(room).emit('pong state', room, pongGames[room]);
   });
@@ -145,6 +145,13 @@ io.on("connection", (socket) => {
 setInterval(() => {
   for (const room in pongGames) {
     let g = pongGames[room];
+    // Apply paddle velocities for smooth movement
+    if (typeof g.left.vy === 'number') {
+      g.left.y = Math.max(0, Math.min(250 - g.paddleH, g.left.y + g.left.vy));
+    }
+    if (typeof g.right.vy === 'number') {
+      g.right.y = Math.max(0, Math.min(250 - g.paddleH, g.right.y + g.right.vy));
+    }
     g.ball.x += g.ball.vx;
     g.ball.y += g.ball.vy;
     // Bounce boven/onder
@@ -166,9 +173,20 @@ setInterval(() => {
       g.ball.vx *= -1;
       g.ball.x = 380 - g.ball.radius;
     }
-    // Score
-    if (g.ball.x < 0) { g.right.score++; Object.assign(g, createPongState()); }
-    if (g.ball.x > 400) { g.left.score++; Object.assign(g, createPongState()); }
+    // Score + win condition at 10 points
+    if (g.ball.x < 0) { g.right.score++; }
+    if (g.ball.x > 400) { g.left.score++; }
+    // Check win
+    if (g.left.score >= 10 || g.right.score >= 10) {
+      const winner = g.left.score >= 10 ? 'left' : 'right';
+      io.in(room).emit('pong gameover', room, winner);
+      delete pongGames[room];
+      continue;
+    }
+    // Reset rally after a score
+    if (g.ball.x < 0 || g.ball.x > 400) {
+      Object.assign(g, { ...createPongState(), left: { ...g.left }, right: { ...g.right } });
+    }
     io.in(room).emit('pong state', room, g);
   }
 }, 40);
