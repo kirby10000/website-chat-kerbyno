@@ -84,16 +84,24 @@ io.on("connection", (socket) => {
       // GROEPSCHAT: stuur naar iedereen in de room (ook jezelf)
       io.to(data.tab).emit("chat message", msg);
     } else if (data.tab !== sender.name) {
-      // PRIVÉCHAT: stuur naar jezelf en de ander (beide krijgen het bericht)
+      // PRIVÉCHAT: stuur naar jezelf en de ander
+      // Voor de sender: msg.tab = data.tab (naam van ontvanger) ✓
+      // Voor de ontvanger: msg.tab moet de naam van de sender zijn!
       let receiverSockets = [];
       for (let [id, u] of users.entries()) {
         if (u.name === data.tab) receiverSockets.push(id);
       }
-      // Bericht naar ontvanger(s)
+      // Bericht naar ontvanger(s) - met tab = sender naam
+      const receiverMsg = {
+        tab: sender.name,  // Voor ontvanger: tab is de naam van de sender
+        user: sender.name,
+        text: data.text,
+        color: "#ff7f00"
+      };
       receiverSockets.forEach(id => {
-        io.to(id).emit("chat message", msg);
+        io.to(id).emit("chat message", receiverMsg);
       });
-      // Altijd ook naar jezelf
+      // Naar jezelf - met tab = ontvanger naam (zoals het werd verstuurd)
       socket.emit("chat message", msg);
     }
     // Geen io.emit(), geen fallback
