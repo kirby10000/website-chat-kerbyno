@@ -409,7 +409,8 @@ if (window.Notification && Notification.permission !== "granted") {
 const pongContainer = document.querySelector('.pong-container');
 const pongCanvas = document.getElementById('pongCanvas');
 const pongInfo = document.querySelector('.pong-info');
-const ctx = pongCanvas.getContext('2d');
+const pongToggleBtn = document.getElementById('pongToggleBtn');
+const ctx = pongCanvas ? pongCanvas.getContext('2d') : null;
 let pongGame = null;
 let pongInterval = null;
 let pongRole = null;
@@ -419,25 +420,50 @@ let pongReady = false;
 let pongRoom = null;
 let pongYouInvited = false;
 
+// Setup Pong toggle button
+if (pongToggleBtn) {
+  pongToggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (pongContainer) {
+      pongContainer.classList.toggle('collapsed');
+      // If expanding, resize canvas
+      if (!pongContainer.classList.contains('collapsed')) {
+        setTimeout(() => {
+          resizePongCanvas();
+          if (pongGame) drawPong();
+        }, 100);
+      }
+    }
+  });
+}
+
 function resizePongCanvas() {
+  if (!pongCanvas || !pongContainer) return;
+  if (pongContainer.classList.contains('collapsed')) return;
   const parent = pongContainer;
-  if (!parent) return;
-  let width = parent.offsetWidth * 0.95;
+  const content = parent.querySelector('.pong-content');
+  if (!content) return;
+  let width = content.offsetWidth - 48; // Subtract padding
   let height = 250;
-  width = Math.max(320, Math.min(width, 600));
+  width = Math.max(200, Math.min(width, 600));
   pongCanvas.width = Math.round(width);
   pongCanvas.height = Math.round(height);
 }
 window.addEventListener('resize', resizePongCanvas);
 
 function updatePongVisibility() {
-  if (typeof usernames === "undefined" || typeof activeTab === "undefined") return;
+  if (!pongContainer || typeof usernames === "undefined" || typeof activeTab === "undefined") return;
   if (activeTab && usernames.includes(activeTab)) {
+    // Show pong container but keep it collapsed by default
     pongContainer.classList.remove('hidden');
+    // Only expand if it was previously expanded (don't auto-expand)
     pongChatPartner = activeTab;
     pongRoom = pongGetRoomName();
     pongResetUI();
-    setTimeout(() => { resizePongCanvas(); drawPong(); }, 50);
+    // Only resize if not collapsed
+    if (!pongContainer.classList.contains('collapsed')) {
+      setTimeout(() => { resizePongCanvas(); if (pongGame) drawPong(); }, 50);
+    }
   } else {
     pongContainer.classList.add('hidden');
     stopPong();
@@ -453,6 +479,7 @@ function pongGetRoomName() {
 }
 
 function pongResetUI() {
+  if (!pongContainer || !pongInfo) return;
   pongWanted = false;
   pongReady = false;
   pongYouInvited = false;
@@ -460,21 +487,31 @@ function pongResetUI() {
   pongRole = null;
   pongInfo.textContent = 'Klik om Pong te starten';
   pongContainer.classList.remove('pong-active');
-  ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+  if (ctx && pongCanvas) {
+    ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+  }
 }
 
-pongContainer.addEventListener('click', function() {
-  if (!pongChatPartner) return;
-  if (pongReady) return;
-  if (!pongWanted) {
-    pongWanted = true;
-    pongYouInvited = true;
-    pongInfo.textContent = 'Wachten op tegenstander...';
-    pongContainer.classList.add('pong-active');
-    socket.emit('pong request', pongRoom, pongChatPartner);
-    socket.emit('chat message', { tab: pongChatPartner, text: `${username} wil Pong spelen! Klik op het Pong-venster om te starten.` });
+// Setup click handler for pong canvas (only on canvas, not header)
+if (pongContainer) {
+  const pongContent = pongContainer.querySelector('.pong-content');
+  if (pongContent && pongCanvas) {
+    pongCanvas.addEventListener('click', function() {
+      if (!pongChatPartner) return;
+      if (pongReady) return;
+      if (!pongWanted) {
+        pongWanted = true;
+        pongYouInvited = true;
+        if (pongInfo) pongInfo.textContent = 'Wachten op tegenstander...';
+        pongContainer.classList.add('pong-active');
+        if (socket) {
+          socket.emit('pong request', pongRoom, pongChatPartner);
+          socket.emit('chat message', { tab: pongChatPartner, text: `${username} wil Pong spelen! Klik op het Pong-venster om te starten.` });
+        }
+      }
+    });
   }
-});
+}
 
 function setupPongSocketListeners() {
   if (!socket) return;
@@ -485,18 +522,28 @@ function setupPongSocketListeners() {
       pongStart(partner, false);
       socket.emit('pong accept', room, partner);
     } else {
-      pongInfo.textContent = `${partner} wil Pong spelen! Klik om te starten.`;
-      pongContainer.classList.add('pong-active');
+      if (pongInfo) pongInfo.textContent = `${partner} wil Pong spelen! Klik om te starten.`;
+      if (pongContainer) {
+        pongContainer.classList.add('pong-active');
+        // Auto-expand when receiving pong request
+        pongContainer.classList.remove('collapsed');
+        setTimeout(() => { resizePongCanvas(); }, 100);
+      }
       pongYouInvited = false;
-      pongContainer.onclick = function() {
-        if (!pongReady) {
-          pongWanted = true;
-          pongContainer.classList.add('pong-active');
-          pongInfo.textContent = 'Wachten op tegenstander...';
-          pongStart(partner, false);
-          socket.emit('pong accept', room, partner);
-        }
-      };
+      // Setup click handler on canvas
+      if (pongCanvas) {
+        const canvasClickHandler = function() {
+          if (!pongReady) {
+            pongWanted = true;
+            if (pongContainer) pongContainer.classList.add('pong-active');
+            if (pongInfo) pongInfo.textContent = 'Wachten op tegenstander...';
+            pongStart(partner, false);
+            socket.emit('pong accept', room, partner);
+            pongCanvas.removeEventListener('click', canvasClickHandler);
+          }
+        };
+        pongCanvas.addEventListener('click', canvasClickHandler);
+      }
     }
   });
 
@@ -519,7 +566,11 @@ function setupPongSocketListeners() {
   });
   
   socket.on('pong start', () => {
-    pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
+    if (pongInfo) pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
+    if (pongContainer) {
+      pongContainer.classList.remove('collapsed');
+      setTimeout(() => { resizePongCanvas(); }, 100);
+    }
   });
 
   // Gameover: show win/lose based on your role, then stop
@@ -532,11 +583,13 @@ function setupPongSocketListeners() {
 }
 
 function pongStart(otherName, youInvite) {
-  if (!socket) return;
+  if (!socket || !pongContainer || !pongInfo) return;
   pongReady = true;
   pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
   pongContainer.classList.add('pong-active');
-  pongContainer.onclick = null;
+  // Auto-expand when game starts
+  pongContainer.classList.remove('collapsed');
+  setTimeout(() => { resizePongCanvas(); }, 100);
   if (youInvite) {
     pongRole = 'right';
   } else {
@@ -597,14 +650,18 @@ function stopPong() {
   pongReady = false;
   pongWanted = false;
   pongYouInvited = false;
-  ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
-  pongInfo.textContent = '';
-  pongContainer.classList.remove('pong-active');
-  pongContainer.onclick = null;
+  if (ctx && pongCanvas) {
+    ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
+  }
+  if (pongInfo) pongInfo.textContent = '';
+  if (pongContainer) {
+    pongContainer.classList.remove('pong-active');
+  }
 }
 
 function drawPong() {
-  if (!pongGame) return;
+  if (!pongGame || !ctx || !pongCanvas) return;
+  if (pongContainer && pongContainer.classList.contains('collapsed')) return;
   resizePongCanvas();
   ctx.clearRect(0, 0, pongCanvas.width, pongCanvas.height);
 
