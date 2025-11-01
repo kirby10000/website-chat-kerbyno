@@ -292,36 +292,107 @@ html, body {
 
 /* PONG - RECHTS! */
 .pong-container {
+  background: #fff;
+  border-radius: 22px 0 0 22px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
   width: 420px;
   min-width: 320px;
   max-width: 600px;
-  background: #fffbe9;
+  height: 95vh;
+  margin: auto 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.pong-header {
+  padding: 20px 24px 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
+  border-radius: 22px 0 0 0;
+  min-height: 65px;
+  box-sizing: border-box;
+}
+
+.pong-header h3 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: bold;
+  color: #333;
+}
+
+.pong-toggle-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  color: #666;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pong-toggle-btn:hover {
+  background: #f0f0f0;
+  color: #ff7f00;
+}
+
+.pong-toggle-icon {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.pong-container.collapsed .pong-toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.pong-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-left: 1px solid #f3e9d2;
-  box-shadow: -2px 0 10px #eee;
-  padding: 0;
-  height: 95vh;
+  padding: 24px;
+  overflow: hidden;
+  transition: opacity 0.3s ease;
 }
-.pong-container.hidden { display: none !important; }
-.pong-container.pong-active { outline: 2px solid #ff7f00; }
+
+.pong-container.collapsed .pong-content {
+  display: none;
+}
+
+.pong-container.hidden { 
+  display: none !important; 
+}
+
+.pong-container.pong-active { 
+  outline: 2px solid #ff7f00; 
+}
+
 #pongCanvas {
-  width: 99%;
+  width: 100%;
   max-width: 600px;
   min-width: 200px;
   height: 250px;
   background: #f9f9f9;
   border: 1px solid #eee;
   border-radius: 12px;
-  margin: 18px 0 10px 0;
   display: block;
 }
+
 .pong-info {
   color: #666;
   font-size: 15px;
-  margin-bottom: 10px;
+  margin-top: 12px;
   min-height: 24px;
   text-align: center;
 }
