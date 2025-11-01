@@ -120,6 +120,9 @@ function initDOM() {
   
   // Setup login handlers
   setupLoginHandlers();
+  
+  // Setup chat handlers (na login, maar kunnen alvast worden ingesteld)
+  setupChatHandlers();
 }
 
 // Notificatie geluid
@@ -182,40 +185,73 @@ function setupLoginHandlers() {
   });
 }
 
-// Groep aanmaken/joinen
-if (createRoomBtn) {
-  createRoomBtn.onclick = () => {
-    if (!socket || !newRoomInput) return;
-    const room = newRoomInput.value.trim();
-    if (!room) return;
-    deletedChats.delete(room);
-    socket.emit("join room", room);
-    newRoomInput.value = "";
-    if (!tabs[room]) tabs[room] = [];
-    switchTab(room);
-  };
-}
+// Setup chat handlers (berichten versturen, groepen aanmaken)
+function setupChatHandlers() {
+  // Groep aanmaken/joinen
+  if (createRoomBtn && newRoomInput) {
+    const createRoom = () => {
+      if (!socket) {
+        console.error("Socket niet verbonden!");
+        return;
+      }
+      const room = newRoomInput.value.trim();
+      if (!room) return;
+      deletedChats.delete(room);
+      socket.emit("join room", room);
+      newRoomInput.value = "";
+      if (!tabs[room]) tabs[room] = [];
+      switchTab(room);
+    };
+    
+    createRoomBtn.onclick = createRoom;
+    
+    // Enter toets voor groep aanmaken
+    newRoomInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        createRoom();
+      }
+    });
+  } else {
+    console.error("createRoomBtn of newRoomInput niet gevonden!");
+  }
 
-// Enter om te versturen
-if (messageInput) {
-  messageInput.addEventListener("keydown", function(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (sendBtn) sendBtn.click();
-    }
-  });
-}
+  // Enter om te versturen
+  if (messageInput) {
+    messageInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (sendBtn) sendBtn.click();
+      }
+    });
+  } else {
+    console.error("messageInput niet gevonden!");
+  }
 
-// Verzenden knop
-if (sendBtn) {
-  sendBtn.onclick = () => {
-    if (!socket || !activeTab) return;
-    const text = messageInput.value.trim();
-    if (!text || !activeTab) return;
-    if (deletedChats.has(activeTab)) return;
-    socket.emit("chat message", { tab: activeTab, text });
-    messageInput.value = "";
-  };
+  // Verzenden knop
+  if (sendBtn) {
+    sendBtn.onclick = () => {
+      if (!socket) {
+        console.error("Socket niet verbonden!");
+        return;
+      }
+      if (!activeTab) {
+        console.error("Geen actieve tab!");
+        return;
+      }
+      if (!messageInput) {
+        console.error("messageInput niet gevonden!");
+        return;
+      }
+      const text = messageInput.value.trim();
+      if (!text) return;
+      if (deletedChats.has(activeTab)) return;
+      socket.emit("chat message", { tab: activeTab, text });
+      messageInput.value = "";
+    };
+  } else {
+    console.error("sendBtn niet gevonden!");
+  }
 }
 
 function switchTab(tab) {
