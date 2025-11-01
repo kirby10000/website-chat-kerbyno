@@ -45,7 +45,16 @@
           </button>
         </div>
         <div class="pong-content">
-          <canvas id="pongCanvas" width="400" height="250"></canvas>
+          <div class="pong-game-wrapper">
+            <canvas id="pongCanvas" width="400" height="250"></canvas>
+            <div class="pong-win-overlay hidden" id="pongWinOverlay">
+              <div class="pong-win-content">
+                <h2 class="pong-win-title" id="pongWinTitle">Gewonnen! 🎉</h2>
+                <p class="pong-win-score" id="pongWinScore">10 - 5</p>
+                <button class="pong-play-again-btn" id="pongPlayAgainBtn">Opnieuw Spelen</button>
+              </div>
+            </div>
+          </div>
           <div class="pong-info"></div>
         </div>
       </div>
