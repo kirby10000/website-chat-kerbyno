@@ -114,6 +114,7 @@ html, body {
   height: 100%;
   box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .sidebar input, .sidebar button { border-radius: 10px; }
 .sidebar input {
@@ -134,7 +135,14 @@ html, body {
 }
 .sidebar button:hover { background: #e76f00; }
 .sidebar h3 { margin: 20px 0 8px 0; font-size: 16px; color: #666; }
-.sidebar ul { list-style: none; padding: 0; margin: 0; }
+.sidebar ul { 
+  list-style: none; 
+  padding: 0; 
+  margin: 0; 
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
 .chat-item {
   position: relative;
   display: flex;
@@ -150,8 +158,11 @@ html, body {
   transition: transform 0.1s, box-shadow 0.2s;
   width: 100%;
   min-height: 38px;
+  max-width: 100%;
   border: none;
   outline: none;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .chat-item:hover { transform: scale(1.02); box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
 .chat-item.active { outline: 2px solid #ff7f00; box-shadow: 0 0 0 3px rgba(255,127,0,0.2); }
@@ -314,17 +325,19 @@ html, body {
   min-width: 8px;
   max-width: 8px;
   border-radius: 22px 0 0 22px;
-  background: linear-gradient(135deg, #ff7f00 0%, #ffb46e 100%);
-  box-shadow: 0 4px 16px rgba(255, 127, 0, 0.3);
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   cursor: pointer;
   overflow: visible;
+  border: 1px solid #eee;
 }
 
 .pong-container.collapsed:hover {
   width: 12px;
   min-width: 12px;
   max-width: 12px;
-  box-shadow: 0 6px 20px rgba(255, 127, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  background: #fafafa;
 }
 
 .pong-header {
