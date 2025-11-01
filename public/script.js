@@ -377,16 +377,58 @@ socket.on('pong start', () => {
   pongInfo.textContent = 'Spel gestart! Gebruik ↑/↓';
 });
 
+// Gameover: show win/lose based on your role, then stop
+socket.on('pong gameover', (room, winnerRole) => {
+  if (pongRoom !== room) return;
+  const youWin = pongRole && winnerRole === pongRole;
+  pongInfo.textContent = youWin ? 'Je hebt gewonnen! 🎉' : 'Je hebt verloren. 😞';
+  stopPong();
+});
+
+// Track welke keys ingedrukt zijn voor continue beweging
+const pressedKeys = new Set();
+let pongMoveInterval = null;
+
 document.addEventListener('keydown', function(e){
   if (!pongGame || !pongRole || !pongReady) return;
   if (document.activeElement !== pongContainer && document.activeElement !== document.body) return;
-  if (e.key === "ArrowUp") socket.emit('pong move', pongRoom, pongRole, -1);
-  if (e.key === "ArrowDown") socket.emit('pong move', pongRoom, pongRole, +1);
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    e.preventDefault();
+    if (pressedKeys.has(e.key)) return; // Al ingedrukt
+    pressedKeys.add(e.key);
+    // Eerste beweging direct
+    socket.emit('pong move', pongRoom, pongRole, e.key === "ArrowUp" ? -1 : 1);
+    // Continue beweging met interval
+    if (pongMoveInterval) clearInterval(pongMoveInterval);
+    pongMoveInterval = setInterval(() => {
+      if (!pongGame || !pongRole || !pongReady) {
+        clearInterval(pongMoveInterval);
+        pongMoveInterval = null;
+        pressedKeys.clear();
+        return;
+      }
+      if (pressedKeys.has("ArrowUp")) socket.emit('pong move', pongRoom, pongRole, -1);
+      if (pressedKeys.has("ArrowDown")) socket.emit('pong move', pongRoom, pongRole, 1);
+    }, 20); // ~50 updates per seconde voor soepele beweging
+  }
+});
+
+document.addEventListener('keyup', function(e){
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    pressedKeys.delete(e.key);
+    if (pressedKeys.size === 0 && pongMoveInterval) {
+      clearInterval(pongMoveInterval);
+      pongMoveInterval = null;
+    }
+  }
 });
 
 function stopPong() {
   if (pongInterval) clearInterval(pongInterval);
   pongInterval = null;
+  if (pongMoveInterval) clearInterval(pongMoveInterval);
+  pongMoveInterval = null;
+  pressedKeys.clear();
   pongGame = null;
   pongRole = null;
   pongReady = false;
