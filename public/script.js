@@ -1,4 +1,5 @@
-const socket = io();
+// Wacht tot DOM geladen is voordat we elementen ophalen
+let socket;
 let username = "";
 let activeTab = null;
 const tabs = {};
@@ -8,19 +9,64 @@ let usernames = [];
 const unreadCounts = {};
 const deletedChats = new Set();
 
-const loginScreen = document.getElementById("loginScreen");
-const enterChat = document.getElementById("enterChat");
-const usernameInput = document.getElementById("usernameInput");
-const app = document.querySelector(".app");
-const allUsersList = document.getElementById("allUsersList");
-const newRoomInput = document.getElementById("newRoomInput");
-const createRoomBtn = document.getElementById("createRoom");
-const chatHeader = document.getElementById("chatHeader");
-const messagesDiv = document.getElementById("messages");
-const messageInput = document.getElementById("messageInput");
-const sendBtn = document.getElementById("sendBtn");
-const groupsList = document.getElementById("groupsList");
-const notifSound = document.getElementById("notifSound");
+// Initialize socket when DOM is ready
+function initSocket() {
+  if (typeof io === 'undefined') {
+    console.error("Socket.IO niet geladen! Controleer of /socket.io/socket.io.js correct laadt.");
+    setTimeout(initSocket, 100); // Probeer opnieuw na 100ms
+    return;
+  }
+  socket = io();
+  
+  // Socket event handlers
+  socket.on("connect", () => {
+    console.log("Socket verbonden");
+  });
+  
+  socket.on("disconnect", () => {
+    console.log("Socket verbroken");
+  });
+  
+  socket.on("connect_error", (error) => {
+    console.error("Socket verbindingsfout:", error);
+    alert("Kan niet verbinden met server. Herlaad de pagina.");
+  });
+}
+
+// Start initialization
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initSocket();
+    initDOM();
+  });
+} else {
+  initSocket();
+  initDOM();
+}
+
+// DOM elementen - alleen ophalen wanneer DOM klaar is
+let loginScreen, enterChat, usernameInput, app, allUsersList;
+let newRoomInput, createRoomBtn, chatHeader, messagesDiv;
+let messageInput, sendBtn, groupsList, notifSound;
+
+function initDOM() {
+  loginScreen = document.getElementById("loginScreen");
+  enterChat = document.getElementById("enterChat");
+  usernameInput = document.getElementById("usernameInput");
+  app = document.querySelector(".app");
+  allUsersList = document.getElementById("allUsersList");
+  newRoomInput = document.getElementById("newRoomInput");
+  createRoomBtn = document.getElementById("createRoom");
+  chatHeader = document.getElementById("chatHeader");
+  messagesDiv = document.getElementById("messages");
+  messageInput = document.getElementById("messageInput");
+  sendBtn = document.getElementById("sendBtn");
+  groupsList = document.getElementById("groupsList");
+  notifSound = document.getElementById("notifSound");
+  
+  // Setup login handlers
+  setupLoginHandlers();
+}
 
 // Notificatie geluid
 function playNotification() {
@@ -30,17 +76,57 @@ function playNotification() {
   }
 }
 
-// Login
-enterChat.onclick = () => {
-  const name = usernameInput.value.trim();
-  if (!name) return;
-  username = name;
-  loginScreen.classList.add("hidden");
-  app.classList.remove("hidden");
-  socket.emit("register", name);
-  socket.emit("get users");
-  socket.emit("get rooms");
-};
+// Setup login handlers wanneer DOM klaar is
+function setupLoginHandlers() {
+  if (!loginScreen || !enterChat || !usernameInput || !app) {
+    console.error("Kritieke DOM elementen niet gevonden!");
+    return;
+  }
+
+  // Login functie
+  function performLogin() {
+    const name = usernameInput.value.trim();
+    if (!name) {
+      alert("Voer alstublieft een naam in");
+      return;
+    }
+    username = name;
+    loginScreen.classList.add("hidden");
+    app.classList.remove("hidden");
+    
+    // Check socket verbinding
+    if (!socket) {
+      console.error("Socket niet geïnitialiseerd!");
+      alert("Server verbinding mislukt. Herlaad de pagina.");
+      return;
+    }
+    
+    if (socket.connected) {
+      socket.emit("register", name);
+      socket.emit("get users");
+      socket.emit("get rooms");
+    } else {
+      console.log("Wachten op socket verbinding...");
+      socket.once("connect", () => {
+        socket.emit("register", name);
+        socket.emit("get users");
+        socket.emit("get rooms");
+      });
+      socket.connect();
+    }
+  }
+
+  // Login event handlers
+  enterChat.onclick = performLogin;
+
+  // Enter toets voor login
+  usernameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      performLogin();
+    }
+  });
+}
 
 // Groep aanmaken/joinen
 createRoomBtn.onclick = () => {
