@@ -84,6 +84,13 @@ socket.on("joined room", (myRooms) => {
 socket.on("chat message", (msg) => {
   if (deletedChats.has(msg.tab)) return;
 
+  // Voor privé-chats: zorg dat de andere persoon in de gebruikerslijst staat
+  // msg.tab is de naam van de andere persoon bij privé-chats
+  if (!usernames.includes(msg.tab) && !allRooms.includes(msg.tab)) {
+    // Nieuwe gebruiker ontdekt via privé-bericht, haal gebruikerslijst opnieuw op
+    socket.emit("get users");
+  }
+
   if (!tabs[msg.tab]) tabs[msg.tab] = [];
   tabs[msg.tab].push(msg);
 
